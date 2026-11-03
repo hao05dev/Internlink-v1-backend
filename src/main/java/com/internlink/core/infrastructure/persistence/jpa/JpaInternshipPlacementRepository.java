@@ -52,6 +52,10 @@ public interface JpaInternshipPlacementRepository extends JpaRepository<Internsh
     @EntityGraph(attributePaths = {"student", "company", "mentor", "lecturer", "term", "assessmentScheme"})
     List<InternshipPlacement> findByTermIdAndStudentId(UUID termId, UUID studentId);
 
+    @Query("SELECT p FROM InternshipPlacement p WHERE p.student.id IN :studentIds AND p.term.id IN :termIds")
+    List<InternshipPlacement> findByStudentIdsAndTermIds(@Param("studentIds") java.util.Collection<UUID> studentIds,
+                                                         @Param("termIds") java.util.Collection<UUID> termIds);
+
     Optional<InternshipPlacement> findByStudentFoundApplicationId(UUID studentFoundApplicationId);
 
     @EntityGraph(attributePaths = {"student", "company", "mentor", "lecturer", "term", "assessmentScheme"})

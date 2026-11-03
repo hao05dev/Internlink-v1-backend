@@ -99,7 +99,7 @@ class CorePlacementServicesTest {
         InternshipPlacementMapper placementMapper =
                 new InternshipPlacementMapper(profileRepository);
         PlacementTransitionValidator transitionValidator =
-                new PlacementTransitionValidator(finalResultRepository);
+                new PlacementTransitionValidator(finalResultRepository, null);
         PlacementNotificationHelper notificationHelper =
                 new PlacementNotificationHelper(auditLogService, notificationService);
         PlacementEligibilityService placementEligibility =
@@ -115,7 +115,8 @@ class CorePlacementServicesTest {
                         transitionValidator,
                         notificationHelper,
                         placementEligibility,
-                        new PaginatedResponseMapper());
+                        new PaginatedResponseMapper(),
+                        null);
         LearningAgreement agreement =
                 LearningAgreement.builder().status(AgreementStatus.DRAFT).build();
         agreement.setId(UUID.randomUUID());

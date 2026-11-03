@@ -21,6 +21,8 @@ public class CompanyResponse {
     private String taxCode;
     private String industry;
     private String website;
+    private String logoUrl;
+    private String coverImageUrl;
     private Map<String, Object> address;
     private VerificationStatus verificationStatus;
     private Map<String, Object> verificationDetail;

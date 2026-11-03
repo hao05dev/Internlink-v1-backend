@@ -26,7 +26,7 @@ public class CompanyController {
     private final CompanyService companyService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY_ADMIN', 'BLOG_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY_ADMIN', 'SCHOOL_OFFICE')")
     public ResponseEntity<ApiResponse<List<CompanyResponse>>> getAllCompanies(
         @RequestParam(required = false) VerificationStatus status
     ) {
@@ -64,7 +64,7 @@ public class CompanyController {
     }
 
     @PatchMapping("/{id}/verify")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
     public ResponseEntity<ApiResponse<CompanyResponse>> verifyCompany(
         @PathVariable UUID id,
         @RequestParam VerificationStatus status,

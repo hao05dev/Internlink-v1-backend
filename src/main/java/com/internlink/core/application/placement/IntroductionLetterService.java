@@ -10,12 +10,10 @@ import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
 import com.internlink.core.presentation.placement.dto.request.CreateIntroductionLetterRequest;
 import com.internlink.core.presentation.placement.dto.request.ReviewIntroductionLetterRequest;
 import com.internlink.core.presentation.placement.dto.response.IntroductionLetterResponse;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.enums.IntroductionLetterStatus;
 import com.internlink.core.shared.enums.TermStatus;
 import com.internlink.core.shared.enums.UserRole;
 import com.internlink.core.shared.exception.BadRequestException;
-import com.internlink.core.shared.exception.ForbiddenException;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
 import com.internlink.core.shared.security.ResourceAuthorization;
 import com.internlink.core.shared.security.SecurityGuard;
@@ -49,9 +47,6 @@ public class IntroductionLetterService {
         }
         var roster = rosters.findByTermIdAndClaimedUserId(term.getId(), student.getId())
                 .orElseThrow(() -> new BadRequestException("Sinh viên chưa được xác nhận trong danh sách kỳ thực tập"));
-        if (roster.getEligibilityStatus() != EligibilityStatus.ELIGIBLE) {
-            throw new BadRequestException("Sinh viên chưa đủ điều kiện thực tập");
-        }
         List<IntroductionLetterStatus> activeStatuses = List.of(
                 IntroductionLetterStatus.PENDING,
                 IntroductionLetterStatus.APPROVED,
@@ -74,19 +69,14 @@ public class IntroductionLetterService {
     }
     @Transactional
     public IntroductionLetterResponse review(UUID id, ReviewIntroductionLetterRequest request) {
-        User faculty = actor();
-        ResourceAuthorization.require(
-            faculty.getRole() == UserRole.FACULTY_ADMIN
-            || faculty.getRole() == UserRole.ADMIN
-            || faculty.getRole() == UserRole.BLOG_MANAGER
-        );
+        User office = actor();
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(office));
         IntroductionLetterRequest entity = letterRequests.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("IntroductionLetterRequest", "id", id));
-        requireManagesDepartmentOf(faculty, entity);
-        IntroductionLetterPolicy.requireTransition(entity.getStatus(), request.status());
+                IntroductionLetterPolicy.requireTransition(entity.getStatus(), request.status());
         entity.setStatus(request.status());
         entity.setIssueNote(request.issueNote());
-        entity.setProcessedBy(faculty);
+        entity.setProcessedBy(office);
         entity.setProcessedAt(OffsetDateTime.now());
         if (request.status() == IntroductionLetterStatus.APPROVED) {
             String code = IntroductionLetterPolicy.issuedCode(entity, request.issuedCode());
@@ -103,8 +93,8 @@ public class IntroductionLetterService {
                     "INFO",
                     "Giấy giới thiệu thực tập sẵn sàng",
                     "Giấy giới thiệu của bạn (" + entity.getTargetCompanyName() + ") đã được duyệt với mã "
-                            + entity.getIssuedCode() + ". Vui lòng đến sảnh Văn phòng Khoa để nhận bản in.",
-                    "/student/self-placement"
+                            + entity.getIssuedCode() + ". Vui lòng đến sảnh Văn phòng Trường CNTT-TT để nhận bản in.",
+                    "/student/acceptance-form"
             );
         } else if (request.status() == IntroductionLetterStatus.REJECTED) {
             notifications.sendNotification(
@@ -112,23 +102,18 @@ public class IntroductionLetterService {
                     "WARNING",
                     "Yêu cầu cấp giấy giới thiệu bị từ chối",
                     "Lý do: " + (request.issueNote() != null ? request.issueNote() : "Không đạt yêu cầu"),
-                    "/student/self-placement"
+                    "/student/acceptance-form"
             );
         }
         return responseMapper.fromRequest(saved, studentCode);
     }
     @Transactional
     public IntroductionLetterResponse confirmReceived(UUID id) {
-        User faculty = actor();
-        ResourceAuthorization.require(
-            faculty.getRole() == UserRole.FACULTY_ADMIN
-            || faculty.getRole() == UserRole.ADMIN
-            || faculty.getRole() == UserRole.BLOG_MANAGER
-        );
+        User office = actor();
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(office));
         IntroductionLetterRequest entity = letterRequests.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("IntroductionLetterRequest", "id", id));
-        requireManagesDepartmentOf(faculty, entity);
-        if (entity.getStatus() != IntroductionLetterStatus.APPROVED) {
+                if (entity.getStatus() != IntroductionLetterStatus.APPROVED) {
             throw new BadRequestException("Chỉ giấy giới thiệu đã được duyệt và chưa phát hành mới có thể xác nhận đã nhận");
         }
         entity.setStatus(IntroductionLetterStatus.ISSUED);
@@ -145,22 +130,10 @@ public class IntroductionLetterService {
     }
     @Transactional
     public IntroductionLetterResponse toggleRosterLetterReceived(UUID rosterId) {
-        User faculty = actor();
-        ResourceAuthorization.require(
-            faculty.getRole() == UserRole.FACULTY_ADMIN
-            || faculty.getRole() == UserRole.ADMIN
-            || faculty.getRole() == UserRole.BLOG_MANAGER
-        );
+        User office = actor();
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(office));
         var roster = rosters.findById(rosterId)
                 .orElseThrow(() -> new ResourceNotFoundException("StudentRoster", "id", rosterId));
-        UUID deptId = roster.getTerm().getDepartment().getId();
-        if (faculty.getRole() == UserRole.BLOG_MANAGER) {
-            if (faculty.getDepartment() != null && !faculty.getDepartment().getId().equals(deptId)) {
-                throw new ForbiddenException("Không có quyền thao tác trên khoa này");
-            }
-        } else {
-            ResourceAuthorization.require(ResourceAuthorization.managesDepartment(faculty, deptId));
-        }
         boolean newState = !roster.isLetterReceived();
         roster.setLetterReceived(newState);
         roster.setLetterReceivedAt(newState ? OffsetDateTime.now() : null);
@@ -182,23 +155,13 @@ public class IntroductionLetterService {
     }
     @Transactional
     public List<IntroductionLetterResponse> batchConfirmRosterLetterReceived(List<UUID> rosterIds) {
-        User faculty = actor();
-        ResourceAuthorization.require(
-            faculty.getRole() == UserRole.FACULTY_ADMIN
-            || faculty.getRole() == UserRole.ADMIN
-            || faculty.getRole() == UserRole.BLOG_MANAGER
-        );
+        User office = actor();
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(office));
         OffsetDateTime now = OffsetDateTime.now();
         return rosterIds.stream().map(id -> {
             var rosterOpt = rosters.findById(id);
             if (rosterOpt.isEmpty()) return null;
             var roster = rosterOpt.get();
-            UUID deptId = roster.getTerm().getDepartment().getId();
-            if (faculty.getRole() != UserRole.BLOG_MANAGER) {
-                if (!ResourceAuthorization.managesDepartment(faculty, deptId)) return null;
-            } else if (faculty.getDepartment() != null && !faculty.getDepartment().getId().equals(deptId)) {
-                return null;
-            }
             roster.setLetterReceived(true);
             roster.setLetterReceivedAt(now);
             StudentRoster saved = rosters.save(roster);
@@ -247,19 +210,13 @@ public class IntroductionLetterService {
     @Transactional(readOnly = true)
     public List<IntroductionLetterResponse> byTerm(UUID termId) {
         User user = actor();
-        ResourceAuthorization.require(
-            user.getRole() == UserRole.FACULTY_ADMIN
-            || user.getRole() == UserRole.ADMIN
-            || user.getRole() == UserRole.LECTURER
-            || user.getRole() == UserRole.BLOG_MANAGER
-        );
         var term = terms.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         UUID departmentId = term.getDepartment().getId();
+        // VP Trường xử lý toàn trường; Khoa và GV chỉ theo dõi danh sách của khoa mình.
         ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(user, departmentId)
-                        || (user.getRole() == UserRole.BLOG_MANAGER
-                                && (user.getDepartment() == null || user.getDepartment().getId().equals(departmentId)))
+                ResourceAuthorization.actsForSchool(user)
+                        || ResourceAuthorization.managesDepartment(user, departmentId)
                         || (user.getRole() == UserRole.LECTURER
                                 && user.getDepartment() != null
                                 && user.getDepartment().getId().equals(departmentId)));
@@ -285,17 +242,6 @@ public class IntroductionLetterService {
                     return responseMapper.fromRequest(item, roster.map(StudentRoster::getStudentCode).orElse(null));
                 })
                 .toList();
-    }
-    private void requireManagesDepartmentOf(User faculty, IntroductionLetterRequest entity) {
-        if (faculty.getRole() == UserRole.BLOG_MANAGER) {
-            UUID deptId = entity.getTerm().getDepartment().getId();
-            if (faculty.getDepartment() != null && !faculty.getDepartment().getId().equals(deptId)) {
-                throw new ForbiddenException("Không có quyền thao tác trên khoa này");
-            }
-            return;
-        }
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(faculty, entity.getTerm().getDepartment().getId()));
     }
     private User actor() {
         UUID id = security.currentUser().getId();

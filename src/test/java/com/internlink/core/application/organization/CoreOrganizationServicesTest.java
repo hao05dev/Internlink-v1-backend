@@ -23,8 +23,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.internlink.core.application.organization.impl.AcademicProgramServiceImpl;
 import com.internlink.core.application.organization.impl.DepartmentServiceImpl;
 import com.internlink.core.application.organization.impl.InternshipTermServiceImpl;
+import com.internlink.core.application.organization.impl.RosterAttemptHistoryResolver;
 import com.internlink.core.application.organization.impl.StudentRosterAccountProvisioner;
-import com.internlink.core.application.organization.impl.StudentRosterIneligibleNotifier;
 import com.internlink.core.application.organization.impl.StudentRosterMapper;
 import com.internlink.core.application.organization.impl.StudentRosterServiceImpl;
 import com.internlink.core.application.system.AuditLogService;
@@ -258,7 +258,7 @@ class CoreOrganizationServicesTest {
                         auditLogService,
                         new StudentRosterMapper(),
                         mock(StudentRosterAccountProvisioner.class),
-                        mock(StudentRosterIneligibleNotifier.class));
+                        mock(RosterAttemptHistoryResolver.class));
         Department termDepartment = department();
         User actor = user(UserRole.FACULTY_ADMIN);
         actor.setDepartment(termDepartment);
@@ -277,9 +277,45 @@ class CoreOrganizationServicesTest {
                         .fullName("Student")
                         .academicYear("2020")
                         .internshipCourseCode("CT518E")
+                        .gpa(new java.math.BigDecimal("3.20"))
                         .build();
 
         assertThatThrownBy(() -> service.importRosterList(term.getId(), List.of(item)))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void rosterRejectsStudentWithoutGpa() {
+        StudentRosterServiceImpl service =
+                new StudentRosterServiceImpl(
+                        rosterRepository,
+                        termRepository,
+                        programRepository,
+                        userRepository,
+                        securityGuard,
+                        auditLogService,
+                        new StudentRosterMapper(),
+                        mock(StudentRosterAccountProvisioner.class),
+                        mock(RosterAttemptHistoryResolver.class));
+        Department department = department();
+        User actor = user(UserRole.FACULTY_ADMIN);
+        actor.setDepartment(department);
+        when(securityGuard.currentUser()).thenReturn(CustomUserDetail.create(actor));
+        when(userRepository.findById(actor.getId())).thenReturn(Optional.of(actor));
+        InternshipTerm term = term(department);
+        when(termRepository.findById(term.getId())).thenReturn(Optional.of(term));
+        StudentRosterImportItem item =
+                StudentRosterImportItem.builder()
+                        .programId(program(department).getId())
+                        .studentCode("B20")
+                        .officialEmail("student@example.com")
+                        .fullName("Student")
+                        .academicYear("2020")
+                        .internshipCourseCode("CT518E")
+                        .build();
+
+        assertThatThrownBy(() -> service.importRosterList(term.getId(), List.of(item)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("GPA");
     }
 }

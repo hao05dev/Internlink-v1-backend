@@ -170,10 +170,8 @@ public class NotificationCampaignService {
     }
 
     private void validate(NotificationCampaignRequest request) {
-        if (!Set.of("INTRODUCTION_LETTER", "INELIGIBLE", "GENERAL").contains(request.purpose())
+        if (!Set.of("INTRODUCTION_LETTER", "GENERAL").contains(request.purpose())
                 || !Set.of(
-                                "ELIGIBLE",
-                                "INELIGIBLE",
                                 "ALL_STUDENTS",
                                 "MENTORS",
                                 "LECTURERS",
@@ -191,18 +189,16 @@ public class NotificationCampaignService {
                 || request.body().isBlank()
                 || request.body().length() > 20000)
             throw new BadRequestException("Nội dung hoặc phạm vi campaign không hợp lệ");
-        if (("INELIGIBLE".equals(request.purpose()) && !"INELIGIBLE".equals(request.audience()))
-                || ("INTRODUCTION_LETTER".equals(request.purpose())
-                        && !"ELIGIBLE".equals(request.audience())))
+        if ("INTRODUCTION_LETTER".equals(request.purpose())
+                && !"ALL_STUDENTS".equals(request.audience()))
             throw new BadRequestException("Phạm vi người nhận không đúng mục đích");
         if ("ADMINS".equals(request.audience())) guard.requireRole(UserRole.ADMIN);
     }
 
     static String eventType(String purpose) {
         return switch (purpose) {
-            case "GENERAL" -> "GENERAL_ANNOUNCEMENT";
             case "INTRODUCTION_LETTER" -> "INTRODUCTION_LETTER_PICKUP";
-            default -> "INELIGIBLE_ROSTER_ALERT";
+            default -> "GENERAL_ANNOUNCEMENT";
         };
     }
 

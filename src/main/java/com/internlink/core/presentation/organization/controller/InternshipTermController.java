@@ -25,7 +25,13 @@ public class InternshipTermController {
     private final InternshipTermService termService;
     private final IntroductionLetterNoticeService introductionLetterNoticeService;
 
-    public record IntroductionLetterNoticeRequest(String pickupLocation, LocalDate pickupDate) {}
+    /** {@code rosterIds} is optional; null notifies every student in the term. */
+    public record IntroductionLetterNoticeRequest(
+            String pickupLocation,
+            LocalDate pickupDate,
+            List<UUID> rosterIds,
+            String emailSubjectTemplate,
+            String emailBodyTemplate) {}
 
     @PostMapping("/{id}/introduction-letter-notice")
     @PreAuthorize("hasRole('FACULTY_ADMIN')")
@@ -33,7 +39,8 @@ public class InternshipTermController {
         @PathVariable UUID id, @RequestBody IntroductionLetterNoticeRequest request
     ) {
         return ResponseEntity.ok(ApiResponse.success(introductionLetterNoticeService.send(
-            id, request.pickupLocation(), request.pickupDate())));
+            id, request.pickupLocation(), request.pickupDate(), request.rosterIds(),
+            request.emailSubjectTemplate(), request.emailBodyTemplate())));
     }
 
     @GetMapping

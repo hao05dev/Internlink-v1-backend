@@ -6,7 +6,6 @@ import com.internlink.core.application.system.notification.EmailOutboxService;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipTermRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.exception.BadRequestException;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
 import com.internlink.core.shared.security.ResourceAuthorization;
@@ -20,6 +19,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -37,17 +37,27 @@ public class IntroductionLetterNoticeService {
     private final PlatformTransactionManager transactionManager;
 
     public record NoticeResult(
-            int eligible,
+            int recipients,
             int emailsSent,
             int emailsQueued,
             int notificationsCreated,
             List<String> failedStudentCodes) {}
 
-    private record Recipient(String studentCode, String email, UUID userId) {}
+    private record Recipient(String studentCode, String fullName, String email, UUID userId) {}
 
     private record NoticeBatch(String termName, List<Recipient> recipients) {}
 
-    public NoticeResult send(UUID termId, String pickupLocation, LocalDate pickupDate) {
+    public NoticeResult send(UUID termId, String pickupLocation, LocalDate pickupDate, List<UUID> rosterIds) {
+        return send(termId, pickupLocation, pickupDate, rosterIds, null, null);
+    }
+
+    public NoticeResult send(
+            UUID termId,
+            String pickupLocation,
+            LocalDate pickupDate,
+            List<UUID> rosterIds,
+            String emailSubjectTemplate,
+            String emailBodyTemplate) {
         if (pickupLocation == null
                 || pickupLocation.isBlank()
                 || pickupLocation.length() > 300
@@ -74,14 +84,12 @@ public class IntroductionLetterNoticeService {
                                             actor, term.getDepartment().getId()));
                             List<Recipient> recipients =
                                     rosters.findByTermId(termId).stream()
-                                            .filter(
-                                                    roster ->
-                                                            roster.getEligibilityStatus()
-                                                                    == EligibilityStatus.ELIGIBLE)
+                                            .filter(RosterSelection.of(rosterIds))
                                             .map(
                                                     roster ->
                                                             new Recipient(
                                                                     roster.getStudentCode(),
+                                                                    roster.getFullName() != null ? roster.getFullName() : "",
                                                                     roster.getOfficialEmail(),
                                                                     roster.getClaimedUser() != null
                                                                             ? roster.getClaimedUser()
@@ -97,23 +105,38 @@ public class IntroductionLetterNoticeService {
                                             .toList();
                             if (recipients.isEmpty())
                                 throw new BadRequestException(
-                                        "Kỳ này chưa có sinh viên đủ điều kiện để thông báo");
+                                        RosterSelection.isPartial(rosterIds)
+                                                ? "Không có sinh viên nào trong các sinh viên đã chọn"
+                                                : "Kỳ này chưa có sinh viên để thông báo");
                             return new NoticeBatch(term.getTermName(), recipients);
                         });
         if (batch == null) throw new IllegalStateException("Không tải được danh sách sinh viên");
-        String subject = "Thông báo nhận giấy giới thiệu thực tập - " + batch.termName();
-        String body =
-                "Bạn vui lòng đến "
-                        + pickupLocation.trim()
-                        + " từ ngày "
-                        + pickupDate
-                        + " để nhận bản cứng giấy giới thiệu thực tập cho kỳ "
-                        + batch.termName()
-                        + ".";
+        
+        String dateStr = pickupDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        String rawSubject = (emailSubjectTemplate != null && !emailSubjectTemplate.isBlank())
+                ? emailSubjectTemplate
+                : "Thông báo nhận giấy giới thiệu thực tập - {{termName}}";
+        String rawBody = (emailBodyTemplate != null && !emailBodyTemplate.isBlank())
+                ? emailBodyTemplate
+                : "Bạn vui lòng đến {{pickupLocation}} từ ngày {{pickupDate}} để nhận bản cứng giấy giới thiệu thực tập cho kỳ {{termName}}.";
+
         int emails = 0;
         int inApp = 0;
         java.util.ArrayList<String> failures = new java.util.ArrayList<>();
         for (Recipient recipient : batch.recipients()) {
+            String subject = rawSubject
+                    .replace("{{termName}}", batch.termName())
+                    .replace("{{studentName}}", recipient.fullName())
+                    .replace("{{studentCode}}", recipient.studentCode())
+                    .replace("{{pickupLocation}}", pickupLocation.trim())
+                    .replace("{{pickupDate}}", dateStr);
+            String body = rawBody
+                    .replace("{{termName}}", batch.termName())
+                    .replace("{{studentName}}", recipient.fullName())
+                    .replace("{{studentCode}}", recipient.studentCode())
+                    .replace("{{pickupLocation}}", pickupLocation.trim())
+                    .replace("{{pickupDate}}", dateStr);
+
             try {
                 if (gmail.enqueueNotice(recipient.email(), subject, body)) emails++;
             } catch (RuntimeException error) {
@@ -136,7 +159,7 @@ public class IntroductionLetterNoticeService {
                 termId,
                 failures.isEmpty() ? "SUCCESS" : "PARTIAL",
                 Map.of(
-                        "eligible",
+                        "recipients",
                         batch.recipients().size(),
                         "emailsQueued",
                         emails,

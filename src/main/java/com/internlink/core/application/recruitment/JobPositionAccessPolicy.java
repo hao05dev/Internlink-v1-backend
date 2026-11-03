@@ -31,7 +31,7 @@ public class JobPositionAccessPolicy {
     public boolean canReadJob(User actor, JobPosition job) {
         return job.getStatus() == JobStatus.APPROVED
                 || ResourceAuthorization.isAdmin(actor)
-                || actor.getRole() == UserRole.BLOG_MANAGER
+                || actor.getRole() == UserRole.SCHOOL_OFFICE
                 || ResourceAuthorization.managesDepartment(actor, job.getDepartment().getId())
                 || ResourceAuthorization.representsCompany(actor, job.getCompany().getId());
     }

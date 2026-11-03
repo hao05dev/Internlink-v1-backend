@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BatchProvisionResponse {
-    private int totalEligibleWithoutAccount;
+    private int totalWithoutAccount;
     private int newlyCreatedCount;
     private int linkedExistingCount;
     private List<ProvisionedStudentAccountDto> accounts;

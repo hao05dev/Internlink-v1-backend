@@ -21,7 +21,7 @@ public class EmailTemplateService {
     public record Resolved(UUID templateId, UUID versionId, int version, String subject, String body) {}
 
     private static final Set<String> PURPOSES = Set.of(
-            "GENERAL", "FACULTY_NOTICE", "INELIGIBLE", "INTRODUCTION_LETTER", "INTERVIEW_INVITATION");
+            "GENERAL", "FACULTY_NOTICE", "INTRODUCTION_LETTER", "INTERVIEW_INVITATION");
     private final EmailTemplateRepository repository;
     private final EmailTemplateRenderer renderer;
     private final JpaUserRepository users;

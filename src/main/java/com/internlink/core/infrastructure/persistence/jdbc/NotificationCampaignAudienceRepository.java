@@ -15,8 +15,8 @@ public class NotificationCampaignAudienceRepository {
     }
 
     public List<Target> audience(UUID term, String audience) {
-        if (Set.of("ELIGIBLE", "INELIGIBLE", "ALL_STUDENTS").contains(audience))
-            return studentAudience(term, audience);
+        if ("ALL_STUDENTS".equals(audience))
+            return studentAudience(term);
         String role = switch (audience) {
             case "MENTORS" -> "COMPANY_MENTOR";
             case "LECTURERS" -> "LECTURER";
@@ -40,12 +40,7 @@ public class NotificationCampaignAudienceRepository {
                 (rs, i) -> target(rs), params);
     }
 
-    private List<Target> studentAudience(UUID term, String audience) {
-        String filter = switch (audience) {
-            case "ELIGIBLE" -> " AND r.eligibility_status='ELIGIBLE'";
-            case "INELIGIBLE" -> " AND r.eligibility_status='INELIGIBLE'";
-            default -> "";
-        };
+    private List<Target> studentAudience(UUID term) {
         return jdbc.query("""
 SELECT coalesce(claimed.id,registered.id) AS user_id,coalesce(claimed.email,registered.email,r.official_email) AS email,
     r.full_name AS name,r.student_code
@@ -53,7 +48,7 @@ FROM student_rosters r
 LEFT JOIN users claimed ON claimed.id=r.claimed_user_id
 LEFT JOIN users registered ON r.claimed_user_id IS NULL AND registered.email=r.official_email
 WHERE r.term_id=? AND coalesce(claimed.is_active,registered.is_active,true)=true
-""" + filter + " ORDER BY r.student_code", (rs, i) -> target(rs), term);
+""" + " ORDER BY r.student_code", (rs, i) -> target(rs), term);
     }
 
     private Target target(ResultSet rs) throws SQLException {

@@ -9,7 +9,6 @@ import com.internlink.core.infrastructure.persistence.jpa.JpaStudentProfileRepos
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
 import com.internlink.core.presentation.recruitment.dto.request.JobApplicationRequest;
 import com.internlink.core.shared.enums.DocumentType;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.JobType;
 import com.internlink.core.shared.enums.TermStatus;
@@ -55,8 +54,6 @@ public class JobApplicationSubmissionValidator {
 
                 var roster = rosters.findByTermIdAndClaimedUserId(term.getId(), studentId)
                         .orElseThrow(() -> new BadRequestException("Sinh viên chưa có trong danh sách kỳ thực tập này"));
-                if (roster.getEligibilityStatus() != EligibilityStatus.ELIGIBLE)
-                    throw new BadRequestException("Sinh viên chưa đủ điều kiện tham gia kỳ thực tập");
 
                 if (applications.countActiveApplicationsByStudentInTerm(studentId, term.getId())
                         >= MAX_ACTIVE_APPLICATIONS_PER_TERM)

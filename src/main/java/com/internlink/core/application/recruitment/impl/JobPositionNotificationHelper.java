@@ -5,7 +5,6 @@ import com.internlink.core.domain.organization.StudentRoster;
 import com.internlink.core.domain.recruitment.JobPosition;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +21,9 @@ public class JobPositionNotificationHelper {
     private final JpaStudentRosterRepository studentRosterRepository;
 
     public void notifySubmitted(JobPosition job) {
-        userRepository.findByDepartmentIdAndRole(job.getDepartment().getId(), UserRole.FACULTY_ADMIN)
+        userRepository.findByRole(UserRole.SCHOOL_OFFICE)
             .forEach(user -> notificationService.sendNotification(user.getId(), "JOB_SUBMITTED", "Tin thực tập chờ duyệt",
-                job.getCompany().getCompanyName() + " gửi duyệt vị trí " + job.getTitle(), "/faculty/job-approvals"));
+                job.getCompany().getCompanyName() + " gửi duyệt vị trí " + job.getTitle(), "/school-office/job-approvals"));
     }
 
     public void notifyReviewResult(JobPosition job, JobStatus status, String facultyFeedback) {
@@ -36,12 +35,12 @@ public class JobPositionNotificationHelper {
                     rep.getId(),
                     "JOB_APPROVED",
                     "Tin tuyển dụng đã được duyệt",
-                    "Vị trí \"" + job.getTitle() + "\" đã được Ban chủ nhiệm khoa phê duyệt và đăng tuyển.",
+                    "Vị trí \"" + job.getTitle() + "\" đã được Văn phòng Trường CNTT-TT phê duyệt và đăng tuyển.",
                     "/company/jobs"
                 );
             }
-            // 2. Thông báo cho sinh viên đủ điều kiện trong kỳ thực tập
-            List<StudentRoster> rosters = studentRosterRepository.findByTermIdAndEligibilityStatus(job.getTerm().getId(), EligibilityStatus.ELIGIBLE);
+            // 2. Thông báo cho sinh viên trong danh sách kỳ thực tập
+            List<StudentRoster> rosters = studentRosterRepository.findByTermId(job.getTerm().getId());
             for (var roster : rosters) {
                 if (roster.getClaimedUser() != null) {
                     notificationService.sendNotification(

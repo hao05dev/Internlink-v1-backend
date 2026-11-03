@@ -47,6 +47,23 @@ public class NotificationServiceImpl
 
     @Override
     @Transactional(readOnly = true)
+    public NotificationResponse getById(UUID id, UUID recipientId) {
+        return mapToResponse(findOwned(id, recipientId, "Bạn không có quyền xem thông báo này"));
+    }
+
+    private Notification findOwned(UUID id, UUID recipientId, String forbiddenMessage) {
+        Notification notification =
+                notificationRepository
+                        .findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+        if (!notification.getRecipient().getId().equals(recipientId)) {
+            throw new ForbiddenException(forbiddenMessage);
+        }
+        return notification;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long countUnreadNotifications(UUID recipientId) {
         return notificationRepository.countByRecipientIdAndIsReadFalse(recipientId);
     }
@@ -55,13 +72,7 @@ public class NotificationServiceImpl
     @Transactional
     public NotificationResponse markAsRead(UUID id, UUID recipientId) {
         Notification notification =
-                notificationRepository
-                        .findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
-
-        if (!notification.getRecipient().getId().equals(recipientId)) {
-            throw new ForbiddenException("Bạn không có quyền cập nhật thông báo này");
-        }
+                findOwned(id, recipientId, "Bạn không có quyền cập nhật thông báo này");
 
         if (Boolean.TRUE.equals(notification.getIsRead())) return mapToResponse(notification);
         notification.setIsRead(true);

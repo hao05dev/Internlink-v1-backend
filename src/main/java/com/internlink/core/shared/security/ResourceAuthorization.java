@@ -17,6 +17,16 @@ public final class ResourceAuthorization {
         return actor.getRole() == UserRole.ADMIN;
     }
 
+    /** Văn phòng Trường CNTT-TT: phạm vi toàn trường, không gắn với một khoa. */
+    public static boolean isSchoolOffice(User actor) {
+        return actor != null && actor.getRole() == UserRole.SCHOOL_OFFICE;
+    }
+
+    /** Nghiệp vụ cấp Trường: đăng tin/bài, duyệt DN, giấy giới thiệu, tiếp nhận phiếu, phát giấy tờ. */
+    public static boolean actsForSchool(User actor) {
+        return isAdmin(actor) || isSchoolOffice(actor);
+    }
+
     public static boolean managesDepartment(User actor, UUID departmentId) {
         return isAdmin(actor) || (actor.getRole() == UserRole.FACULTY_ADMIN
             && actor.getDepartment() != null && actor.getDepartment().getId().equals(departmentId));
@@ -29,10 +39,7 @@ public final class ResourceAuthorization {
 
     public static boolean canManageJobs(User actor, UUID companyId) {
         if (actor == null) return false;
-        return isAdmin(actor)
-            || actor.getRole() == UserRole.BLOG_MANAGER
-            || actor.getRole() == UserRole.FACULTY_ADMIN
-            || representsCompany(actor, companyId);
+        return actsForSchool(actor) || representsCompany(actor, companyId);
     }
 
     public static boolean belongsToCompany(User actor, UUID companyId) {

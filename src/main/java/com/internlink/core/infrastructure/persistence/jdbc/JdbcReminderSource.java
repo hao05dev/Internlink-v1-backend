@@ -29,7 +29,7 @@ WITH placements AS (
         'Nhắc hoàn thành hồ sơ đăng ký thực tập'::text AS title,'/student/applications'::text AS path,
         CASE WHEN t.status='REGISTRATION_OPEN' THEN t.registration_close_at ELSE t.application_deadline END AS due_at
     FROM student_rosters r JOIN internship_terms t ON t.id=r.term_id
-    WHERE r.eligibility_status='ELIGIBLE' AND r.claimed_user_id IS NOT NULL
+    WHERE r.claimed_user_id IS NOT NULL
         AND t.status IN ('REGISTRATION_OPEN','APPLICATION_OPEN')
         AND NOT EXISTS(SELECT 1 FROM internship_placements p WHERE p.term_id=t.id AND p.student_id=r.claimed_user_id
             AND p.status NOT IN ('TERMINATED','TRANSFERRED'))

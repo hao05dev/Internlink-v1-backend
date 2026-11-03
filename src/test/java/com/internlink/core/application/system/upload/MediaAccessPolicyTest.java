@@ -40,10 +40,10 @@ class MediaAccessPolicyTest {
                                 policy.requireUpload(
                                         faculty, MediaPurpose.POST_COVER, author.getId(), null))
                 .isInstanceOf(com.internlink.core.shared.exception.ForbiddenException.class);
-        assertThat(policy.requireUpload(faculty, MediaPurpose.POST_COVER, null, null))
-                .isEqualTo(faculty.getId());
+        assertThatThrownBy(() -> policy.requireUpload(faculty, MediaPurpose.POST_COVER, null, null))
+                .isInstanceOf(com.internlink.core.shared.exception.ForbiddenException.class);
 
-        var blogManager = User.builder().role(UserRole.BLOG_MANAGER).build();
+        var blogManager = User.builder().role(UserRole.SCHOOL_OFFICE).build();
         blogManager.setId(UUID.randomUUID());
         assertThat(policy.requireUpload(blogManager, MediaPurpose.POST_COVER, null, null))
                 .isEqualTo(blogManager.getId());

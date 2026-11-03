@@ -45,9 +45,7 @@ public class MediaAccessPolicy {
                 throw new BadRequestException("Chọn doanh nghiệp trước khi tải ảnh/tệp");
             if (purpose.job()) {
                 ResourceAuthorization.require(
-                        ResourceAuthorization.isAdmin(user)
-                                || user.getRole() == UserRole.BLOG_MANAGER
-                                || user.getRole() == UserRole.FACULTY_ADMIN
+                        ResourceAuthorization.actsForSchool(user)
                                 || ResourceAuthorization.representsCompany(user, context));
             } else {
                 ResourceAuthorization.require(
@@ -57,10 +55,7 @@ public class MediaAccessPolicy {
             return context;
         }
         if (purpose.post()) {
-            ResourceAuthorization.require(
-                    user.getRole() == UserRole.ADMIN 
-                            || user.getRole() == UserRole.FACULTY_ADMIN
-                            || user.getRole() == UserRole.BLOG_MANAGER);
+            ResourceAuthorization.require(ResourceAuthorization.actsForSchool(user));
             if (context == null || context.equals(user.getId())) return user.getId();
             var author =
                     users.findById(context)
@@ -69,11 +64,7 @@ public class MediaAccessPolicy {
             ResourceAuthorization.require(
                     ResourceAuthorization.isAdmin(user)
                             || user.getId().equals(author.getId())
-                            || (user.getDepartment() != null
-                                    && author.getDepartment() != null
-                                    && user.getDepartment()
-                                            .getId()
-                                            .equals(author.getDepartment().getId())));
+                            || ResourceAuthorization.isSchoolOffice(author));
             return context;
         }
         if (context == null
@@ -119,12 +110,13 @@ public class MediaAccessPolicy {
         if (assets.publicReference(asset)) return true;
         if (user == null) return false;
         if (user.getId().equals(asset.owner()) || ResourceAuthorization.isAdmin(user)) return true;
-        if (asset.purpose().job() && (user.getRole() == UserRole.BLOG_MANAGER || user.getRole() == UserRole.FACULTY_ADMIN))
+        if (asset.purpose().job() && (user.getRole() == UserRole.SCHOOL_OFFICE || user.getRole() == UserRole.FACULTY_ADMIN))
             return true;
         if ((asset.purpose().job() || asset.purpose().company()) && ResourceAuthorization.representsCompany(user, asset.context()))
             return true;
         if (asset.purpose().company()) return false;
-        return (user.getRole() == UserRole.FACULTY_ADMIN || user.getRole() == UserRole.BLOG_MANAGER)
+        if (asset.purpose().post() && ResourceAuthorization.isSchoolOffice(user)) return true;
+        return user.getRole() == UserRole.FACULTY_ADMIN
                 && user.getDepartment() != null
                 && assets.departmentReference(asset, user.getDepartment().getId());
     }

@@ -54,7 +54,7 @@ class GoogleSheetRosterServiceTest {
         when(users.findById(actor.getId())).thenReturn(Optional.of(actor));
         when(programs.findByCode("SE")).thenReturn(Optional.of(program));
         when(google.json(eq("GET"), any(URI.class), eq(GoogleWorkspaceClient.SHEETS_READ), isNull(), isNull(), isNull()))
-            .thenReturn(new ObjectMapper().readTree("{\"values\":[[\"studentCode\",\"fullName\",\"officialEmail\",\"programCode\",\"academicYear\",\"internshipCourseCode\"],[\"b2110940\",\"Lê Hoàng Nam\",\"b2110940@student.ctu.edu.vn\",\"se\",\"K47\",\"CT444\"]]}"));
+            .thenReturn(new ObjectMapper().readTree("{\"values\":[[\"studentCode\",\"fullName\",\"officialEmail\",\"programCode\",\"academicYear\",\"internshipCourseCode\",\"gpa\"],[\"b2110940\",\"Lê Hoàng Nam\",\"b2110940@student.ctu.edu.vn\",\"se\",\"K47\",\"CT444\",\"3,45\"]]}"));
         when(rosterService.importRosterList(eq(termId), anyList())).thenReturn(List.of());
 
         new GoogleSheetRosterService(google, programs, rosterService, terms, users, securityGuard)
@@ -66,5 +66,6 @@ class GoogleSheetRosterServiceTest {
         assertThat(items.getValue()).hasSize(1);
         assertThat(items.getValue().get(0).getStudentCode()).isEqualTo("B2110940");
         assertThat(items.getValue().get(0).getProgramId()).isEqualTo(program.getId());
+        assertThat(items.getValue().get(0).getGpa()).isEqualByComparingTo("3.45");
     }
 }

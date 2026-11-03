@@ -31,7 +31,7 @@ public class CompanyAccessPolicy {
 
     public void requireRead(UUID id) {
         User user = actor();
-        ResourceAuthorization.require(ResourceAuthorization.isAdmin(user) || user.getRole() == UserRole.FACULTY_ADMIN
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(user) || user.getRole() == UserRole.FACULTY_ADMIN
                 || ResourceAuthorization.belongsToCompany(user, id));
     }
 

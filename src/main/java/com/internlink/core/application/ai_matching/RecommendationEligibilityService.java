@@ -5,7 +5,6 @@ import com.internlink.core.domain.organization.StudentRoster;
 import com.internlink.core.domain.recruitment.JobPosition;
 import com.internlink.core.domain.student.StudentProfile;
 import com.internlink.core.infrastructure.persistence.jpa.*;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.TermStatus;
 import lombok.RequiredArgsConstructor;
@@ -38,8 +37,8 @@ public class RecommendationEligibilityService {
         }
 
         StudentRoster roster = rosterRepository.findByTermIdAndClaimedUserId(termId, studentId).orElse(null);
-        if (roster == null || roster.getEligibilityStatus() != EligibilityStatus.ELIGIBLE) {
-            return EligibilityResult.ineligible("NOT_IN_ROSTER", "Sinh viên chưa đủ điều kiện tham gia kỳ thực tập này");
+        if (roster == null) {
+            return EligibilityResult.ineligible("NOT_IN_ROSTER", "Sinh viên không có trong danh sách thực tập của kỳ này");
         }
 
         var placements = placementRepository.findByTermIdAndStudentId(termId, studentId);

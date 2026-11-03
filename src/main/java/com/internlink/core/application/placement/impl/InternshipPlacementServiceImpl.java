@@ -1,9 +1,11 @@
 package com.internlink.core.application.placement.impl;
 
+import com.internlink.core.application.placement.AcceptanceFormGate;
 import com.internlink.core.application.placement.InternshipPlacementService;
 import com.internlink.core.application.placement.PlacementEligibilityService;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.InternshipTerm;
+import com.internlink.core.domain.organization.StudentRoster;
 import com.internlink.core.domain.placement.InternshipPlacement;
 import com.internlink.core.domain.placement.LearningAgreement;
 import com.internlink.core.infrastructure.persistence.jpa.*;
@@ -43,6 +45,7 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
     private final PlacementNotificationHelper notificationHelper;
     private final PlacementEligibilityService placementEligibility;
     private final com.internlink.core.shared.api.PaginatedResponseMapper paginatedResponseMapper;
+    private final AcceptanceFormGate acceptanceFormGate;
 
     @Override
     @Transactional(readOnly = true)
@@ -139,8 +142,9 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
             TermGuard.requireNotClosed(term);
         }
 
+        StudentRoster roster = null;
         if (term != null) {
-            placementEligibility.requireEligibleRoster(agreement.getStudent().getId(), term.getId());
+            roster = placementEligibility.requireEligibleRoster(agreement.getStudent().getId(), term.getId());
             placementEligibility.requireNoLivePlacement(agreement.getStudent().getId(), term.getId());
         }
 
@@ -150,10 +154,15 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
         if (placementRepository.findByAgreementId(agreementId).isPresent()) {
             throw new BadRequestException("Lần thực tập đã được kích hoạt từ thỏa thuận này rồi");
         }
+        acceptanceFormGate.approveForAgreement(agreementId, currentActor());
 
-        User lecturer = userRepository.findById(lecturerId)
+        User chosen = lecturerId == null ? null : userRepository.findById(lecturerId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", lecturerId));
+        User lecturer = placementEligibility.resolveLecturer(chosen, roster);
         placementEligibility.requireActiveLecturer(lecturer, agreement.getDepartment().getId());
+        if (term != null) {
+            placementEligibility.syncRosterLecturer(agreement.getStudent().getId(), term.getId(), lecturer);
+        }
 
         User mentor = agreement.getOffer().getProposedMentor();
         if (mentor == null) {
@@ -197,9 +206,10 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", lecturerId));
         placementEligibility.requireActiveLecturer(lecturer, placement.getTerm().getDepartment().getId());
 
-        UUID previousId = placement.getLecturer().getId();
+        UUID previousId = placement.getLecturer() != null ? placement.getLecturer().getId() : null;
         placement.setLecturer(lecturer);
         InternshipPlacement saved = placementRepository.save(placement);
+        placementEligibility.syncRosterLecturer(placement.getStudent().getId(), placement.getTerm().getId(), lecturer);
         notificationHelper.logAndNotifyLecturerAssignment(actor.getId(), saved, lecturer, previousId);
 
         return placementMapper.toResponse(saved);

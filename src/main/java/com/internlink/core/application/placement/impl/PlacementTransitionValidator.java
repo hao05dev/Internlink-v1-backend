@@ -1,5 +1,6 @@
 package com.internlink.core.application.placement.impl;
 
+import com.internlink.core.application.placement.AcceptanceFormGate;
 import com.internlink.core.domain.placement.InternshipPlacement;
 import com.internlink.core.infrastructure.persistence.jpa.JpaFinalResultRepository;
 import com.internlink.core.shared.enums.PlacementStatus;
@@ -16,9 +17,12 @@ import java.util.UUID;
 public class PlacementTransitionValidator {
 
     private final JpaFinalResultRepository finalResultRepository;
+    private final AcceptanceFormGate acceptanceFormGate;
 
     private static final Map<PlacementStatus, Set<PlacementStatus>> VALID_TRANSITIONS = Map.of(
-        PlacementStatus.PREPARING,    Set.of(PlacementStatus.ACTIVE),
+        // SV bỏ ngang trước khi bắt đầu: phải dừng được, nếu không kỳ sẽ không đóng được.
+        PlacementStatus.PREPARING,    Set.of(PlacementStatus.ACTIVE,
+                                             PlacementStatus.TERMINATED),
         PlacementStatus.ACTIVE,       Set.of(PlacementStatus.PAUSED,
                                              PlacementStatus.COMPLETED,
                                              PlacementStatus.TERMINATED,
@@ -54,6 +58,9 @@ public class PlacementTransitionValidator {
                 || placement.getStudentFoundApplication().getAcceptanceDocument() == null
                 || !"ACTIVE".equals(placement.getStudentFoundApplication().getAcceptanceDocument().getStatus()))) {
             throw new BadRequestException("Thư tiếp nhận của nơi tự tìm không còn hợp lệ");
+        }
+        if (newStatus == PlacementStatus.ACTIVE) {
+            acceptanceFormGate.requirePublished(placement);
         }
         if (newStatus == PlacementStatus.COMPLETED) {
             boolean hasFinalResult = finalResultRepository.findByPlacementId(placement.getId())

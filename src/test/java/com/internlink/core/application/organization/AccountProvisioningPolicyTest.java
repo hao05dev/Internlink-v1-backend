@@ -23,7 +23,7 @@ class AccountProvisioningPolicyTest {
         var provisioner = new StudentRosterAccountProvisioner(rosters, users, mock(SecurityGuard.class),
                 mock(AuditLogService.class), mock(PasswordEncoder.class), mock(StudentProvisionEmailNotifier.class),
                 profiles, mock(AccountActivationTokenService.class));
-        var roster = StudentRoster.builder().officialEmail("admin@example.test").eligibilityStatus(EligibilityStatus.ELIGIBLE).build();
+        var roster = StudentRoster.builder().officialEmail("admin@example.test").build();
         var admin = User.builder().role(UserRole.ADMIN).email("admin@example.test").build();
         when(users.existsByEmail("admin@example.test")).thenReturn(true);
         when(users.findByEmail("admin@example.test")).thenReturn(Optional.of(admin));
@@ -33,11 +33,41 @@ class AccountProvisioningPolicyTest {
         verifyNoInteractions(profiles);
         verifyNoInteractions(rosters);
     }
+    @Test void linkingANeverActivatedStudentStillSendsActivationLink() {
+        var users = mock(JpaUserRepository.class);
+        var guard = mock(SecurityGuard.class);
+        var notifier = mock(StudentProvisionEmailNotifier.class);
+        var tokens = mock(AccountActivationTokenService.class);
+        var provisioner = new StudentRosterAccountProvisioner(mock(JpaStudentRosterRepository.class), users, guard,
+                mock(AuditLogService.class), mock(PasswordEncoder.class), notifier,
+                mock(JpaStudentProfileRepository.class), tokens);
+        var department = Department.builder().name("IT").build();
+        department.setId(UUID.randomUUID());
+        var term = InternshipTerm.builder().department(department).termName("HK1").build();
+        var roster = StudentRoster.builder().term(term).officialEmail("sv@example.test")
+                .fullName("SV").studentCode("B1").build();
+        var student = User.builder().role(UserRole.STUDENT).department(department).email("sv@example.test").build();
+        student.setId(UUID.randomUUID());
+        when(users.existsByEmail("sv@example.test")).thenReturn(true);
+        when(users.findByEmail("sv@example.test")).thenReturn(Optional.of(student));
+        when(guard.currentUser()).thenReturn(mock(com.internlink.core.infrastructure.security.CustomUserDetail.class));
+        when(tokens.issue(student)).thenReturn("http://link");
+        when(tokens.ttlHours()).thenReturn(24L);
+
+        provisioner.provisionSingleAccount(roster, mock(StudentRosterMapper.class));
+        verify(notifier).sendProvisionEmail("sv@example.test", "SV", "B1", "http://link", 24L, "HK1");
+
+        reset(notifier);
+        roster.setClaimedUser(null);
+        student.setLastLoginAt(java.time.OffsetDateTime.now());
+        provisioner.provisionSingleAccount(roster, mock(StudentRosterMapper.class));
+        verifyNoInteractions(notifier);
+    }
     @Test void lecturerProvisionCannotChangeAnExistingAdminsRole() {
         var users = mock(JpaUserRepository.class);
         var departments = mock(JpaDepartmentRepository.class);
         var service = new FacultyLecturerManagementServiceImpl(users, departments, mock(JpaInternshipTermRepository.class),
-                mock(JpaFacultyLecturerQuotaRepository.class), mock(JpaInternshipPlacementRepository.class),
+                mock(JpaFacultyLecturerQuotaRepository.class), mock(JpaStudentRosterRepository.class),
                 mock(PasswordEncoder.class), mock(LecturerProvisionEmailNotifier.class), mock(AuditLogService.class),
                 mock(AccountActivationTokenService.class));
         var department = Department.builder().name("IT").build();

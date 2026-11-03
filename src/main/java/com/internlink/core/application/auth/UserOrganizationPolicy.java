@@ -25,19 +25,10 @@ public class UserOrganizationPolicy {
             user.setCompany(companies.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company", "id", companyId)));
             user.setDepartment(null);
-        } else if (role == UserRole.BLOG_MANAGER) {
-            if (departmentId != null) {
-                user.setDepartment(departments.findById(departmentId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Department", "id", departmentId)));
-            } else {
-                user.setDepartment(null);
-            }
-            user.setCompany(null);
         } else {
+            // ADMIN và Văn phòng Trường CNTT-TT hoạt động ở cấp Trường, không gắn với khoa nào.
             user.setDepartment(null);
             user.setCompany(null);
         }
     }
-
-
 }

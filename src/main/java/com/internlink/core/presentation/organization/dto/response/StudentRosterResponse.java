@@ -1,11 +1,11 @@
 package com.internlink.core.presentation.organization.dto.response;
 
-import com.internlink.core.shared.enums.EligibilityStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -25,8 +25,8 @@ public class StudentRosterResponse {
     private String academicYear;
     private String classCode;
     private String internshipCourseCode;
-    private EligibilityStatus eligibilityStatus;
-    private String eligibilityNote;
+    private Integer internshipCredits;
+    private Integer requiredWeeks;
     private UUID claimedUserId;
     private OffsetDateTime claimedAt;
     private UUID assignedLecturerId;
@@ -39,4 +39,10 @@ public class StudentRosterResponse {
     private java.math.BigDecimal gpa;
     private String phoneNumber;
     private OffsetDateTime createdAt;
+    /** Lần đăng ký học phần thực tập thứ mấy (1 = lần đầu), tính theo MSSV trong cùng khoa. */
+    @Builder.Default
+    private int attemptNumber = 1;
+    /** Các kỳ trước của cùng MSSV, cũ nhất trước. */
+    @Builder.Default
+    private List<RosterPriorAttemptResponse> priorAttempts = List.of();
 }

@@ -63,9 +63,9 @@ class IntroductionLetterServiceTest {
     }
 
     @Test
-    void facultyAdminOfAnotherDepartmentCannotReviewByDirectId() {
+    void facultyAdminCannotReviewLettersBecauseTheSchoolOfficeIssuesThem() {
         var request = pendingRequest();
-        actAs(user(UserRole.FACULTY_ADMIN, otherDepartment));
+        actAs(user(UserRole.FACULTY_ADMIN, ownDepartment));
 
         assertThatThrownBy(() -> service.review(request.getId(),
                 new ReviewIntroductionLetterRequest(IntroductionLetterStatus.APPROVED, null, null)))
@@ -75,19 +75,19 @@ class IntroductionLetterServiceTest {
     }
 
     @Test
-    void facultyAdminOfAnotherDepartmentCannotConfirmReceived() {
+    void facultyAdminCannotConfirmReceived() {
         var request = pendingRequest();
         request.setStatus(IntroductionLetterStatus.APPROVED);
-        actAs(user(UserRole.FACULTY_ADMIN, otherDepartment));
+        actAs(user(UserRole.FACULTY_ADMIN, ownDepartment));
 
         assertThatThrownBy(() -> service.confirmReceived(request.getId())).isInstanceOf(ForbiddenException.class);
         assertThat(request.getStatus()).isEqualTo(IntroductionLetterStatus.APPROVED);
     }
 
     @Test
-    void ownFacultyAdminApprovesThenIssues() {
+    void schoolOfficeApprovesThenIssues() {
         var request = pendingRequest();
-        actAs(user(UserRole.FACULTY_ADMIN, ownDepartment));
+        actAs(user(UserRole.SCHOOL_OFFICE, null));
 
         service.review(request.getId(), new ReviewIntroductionLetterRequest(IntroductionLetterStatus.APPROVED, null, null));
         assertThat(request.getStatus()).isEqualTo(IntroductionLetterStatus.APPROVED);
@@ -103,7 +103,7 @@ class IntroductionLetterServiceTest {
     @Test
     void pendingRequestCannotJumpStraightToIssued() {
         var request = pendingRequest();
-        actAs(user(UserRole.FACULTY_ADMIN, ownDepartment));
+        actAs(user(UserRole.SCHOOL_OFFICE, null));
 
         assertThatThrownBy(() -> service.review(request.getId(),
                 new ReviewIntroductionLetterRequest(IntroductionLetterStatus.ISSUED, null, null)))
@@ -113,7 +113,7 @@ class IntroductionLetterServiceTest {
 
     @Test
     void finalStatesCannotBeReopened() {
-        actAs(user(UserRole.FACULTY_ADMIN, ownDepartment));
+        actAs(user(UserRole.SCHOOL_OFFICE, null));
         for (var finalStatus : List.of(IntroductionLetterStatus.ISSUED, IntroductionLetterStatus.REJECTED, IntroductionLetterStatus.CANCELLED)) {
             var request = pendingRequest();
             request.setStatus(finalStatus);
@@ -127,7 +127,7 @@ class IntroductionLetterServiceTest {
     @Test
     void cannotRevertToPendingOrCancelledThroughReview() {
         var request = pendingRequest();
-        actAs(user(UserRole.FACULTY_ADMIN, ownDepartment));
+        actAs(user(UserRole.SCHOOL_OFFICE, null));
 
         assertThatThrownBy(() -> service.review(request.getId(),
                 new ReviewIntroductionLetterRequest(IntroductionLetterStatus.CANCELLED, null, null)))
@@ -157,16 +157,16 @@ class IntroductionLetterServiceTest {
         actAs(user(UserRole.LECTURER, ownDepartment));
         assertThat(service.byTerm(term.getId())).isEmpty();
 
-        actAs(user(UserRole.BLOG_MANAGER, ownDepartment));
+        actAs(user(UserRole.SCHOOL_OFFICE, null));
         assertThat(service.byTerm(term.getId())).isEmpty();
     }
 
     @Test
-    void blogManagerCanReviewAndConfirmReceivedInSameDepartment() {
+    void schoolOfficeCanReviewAndConfirmReceivedForAnyDepartment() {
         var request = pendingRequest();
         when(letterRequests.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        actAs(user(UserRole.BLOG_MANAGER, ownDepartment));
+        actAs(user(UserRole.SCHOOL_OFFICE, null));
         var reviewed = service.review(request.getId(), new ReviewIntroductionLetterRequest(IntroductionLetterStatus.APPROVED, "GGT-001", null));
         assertThat(reviewed.status()).isEqualTo(IntroductionLetterStatus.APPROVED);
 
@@ -188,7 +188,7 @@ class IntroductionLetterServiceTest {
 
         when(rosters.findById(roster.getId())).thenReturn(Optional.of(roster));
         when(rosters.save(any(StudentRoster.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        actAs(user(UserRole.FACULTY_ADMIN, ownDepartment));
+        actAs(user(UserRole.SCHOOL_OFFICE, null));
 
         var response = service.toggleRosterLetterReceived(roster.getId());
         assertThat(response.letterReceived()).isTrue();

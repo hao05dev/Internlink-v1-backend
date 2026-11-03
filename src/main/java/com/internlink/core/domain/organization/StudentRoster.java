@@ -1,10 +1,11 @@
 package com.internlink.core.domain.organization;
 
 import com.internlink.core.shared.domain.BaseEntity;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.domain.auth.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
@@ -45,13 +46,10 @@ public class StudentRoster extends BaseEntity {
     @Column(name = "internship_course_code", length = 30)
     private String internshipCourseCode;
 
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    @Column(name = "eligibility_status", nullable = false, length = 30)
-    private EligibilityStatus eligibilityStatus = EligibilityStatus.ELIGIBLE;
-
-    @Column(name = "eligibility_note", columnDefinition = "text")
-    private String eligibilityNote;
+    /** 2-3 TC = 8 tuần, 5 TC = 12 tuần; null khi Khoa chưa nhập. */
+    @Column(name = "internship_credits")
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    private Integer internshipCredits;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "claimed_user_id")

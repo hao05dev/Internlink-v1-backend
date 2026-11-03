@@ -94,7 +94,7 @@ public class JobPositionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('COMPANY_REP', 'BLOG_MANAGER', 'FACULTY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COMPANY_REP', 'SCHOOL_OFFICE', 'ADMIN')")
     public ResponseEntity<ApiResponse<JobPositionResponse>> createJob(
         @AuthenticationPrincipal CustomUserDetail userDetail,
         @Valid @RequestBody JobPositionRequest request
@@ -105,7 +105,7 @@ public class JobPositionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('COMPANY_REP', 'BLOG_MANAGER', 'FACULTY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COMPANY_REP', 'SCHOOL_OFFICE', 'ADMIN')")
     public ResponseEntity<ApiResponse<JobPositionResponse>> updateJob(
         @PathVariable UUID id,
         @Valid @RequestBody JobPositionRequest request
@@ -115,19 +115,19 @@ public class JobPositionController {
     }
 
     @PatchMapping("/{id}/submit")
-    @PreAuthorize("hasAnyRole('COMPANY_REP', 'BLOG_MANAGER', 'FACULTY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COMPANY_REP', 'SCHOOL_OFFICE', 'ADMIN')")
     public ResponseEntity<ApiResponse<JobPositionResponse>> submitJob(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(jobPositionService.submitJob(id)));
     }
 
     @PatchMapping("/{id}/close")
-    @PreAuthorize("hasAnyRole('COMPANY_REP', 'BLOG_MANAGER', 'FACULTY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('COMPANY_REP', 'SCHOOL_OFFICE', 'ADMIN')")
     public ResponseEntity<ApiResponse<JobPositionResponse>> closeJobEarly(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success("Đóng nhận hồ sơ vị trí thực tập thành công", jobPositionService.closeJobEarly(id)));
     }
 
     @PatchMapping("/{id}/review")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
     public ResponseEntity<ApiResponse<JobPositionResponse>> reviewJob(
         @PathVariable UUID id,
         @RequestParam JobStatus status,

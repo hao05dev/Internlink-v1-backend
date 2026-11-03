@@ -81,14 +81,14 @@ public class CompanyRegistrationServiceImpl implements CompanyRegistrationServic
             .build();
         User savedUser = userRepository.save(user);
 
-        for (UserRole role : List.of(UserRole.FACULTY_ADMIN, UserRole.ADMIN)) {
+        for (UserRole role : List.of(UserRole.SCHOOL_OFFICE, UserRole.ADMIN)) {
             userRepository.findByRole(role).forEach(admin ->
                 notificationService.sendNotification(
                     admin.getId(),
                     "COMPANY_REGISTERED",
                     "Doanh nghiệp mới chờ thẩm định",
                     savedCompany.getCompanyName() + " đã đăng ký tài khoản tham gia hệ thống.",
-                    role == UserRole.ADMIN ? "/admin/companies" : "/faculty/companies"
+                    role == UserRole.ADMIN ? "/admin/companies" : "/school-office/companies"
                 )
             );
         }

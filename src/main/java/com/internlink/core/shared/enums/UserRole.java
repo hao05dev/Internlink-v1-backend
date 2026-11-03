@@ -7,5 +7,5 @@ public enum UserRole {
     LECTURER,
     FACULTY_ADMIN,
     ADMIN,
-    BLOG_MANAGER
+    SCHOOL_OFFICE
 }

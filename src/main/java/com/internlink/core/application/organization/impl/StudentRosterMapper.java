@@ -1,5 +1,6 @@
 package com.internlink.core.application.organization.impl;
 
+import com.internlink.core.domain.placement.InternshipDurationRule;
 import com.internlink.core.domain.organization.StudentRoster;
 import com.internlink.core.presentation.organization.dto.response.StudentRosterResponse;
 import org.springframework.stereotype.Component;
@@ -23,8 +24,8 @@ public class StudentRosterMapper {
                 .academicYear(entity.getAcademicYear())
                 .classCode(entity.getClassCode())
                 .internshipCourseCode(entity.getInternshipCourseCode())
-                .eligibilityStatus(entity.getEligibilityStatus())
-                .eligibilityNote(entity.getEligibilityNote())
+                .internshipCredits(entity.getInternshipCredits())
+                .requiredWeeks(InternshipDurationRule.requiredWeeks(entity.getInternshipCredits()))
                 .claimedUserId(entity.getClaimedUser() != null ? entity.getClaimedUser().getId() : null)
                 .claimedAt(entity.getClaimedAt())
                 .assignedLecturerId(entity.getAssignedLecturer() != null ? entity.getAssignedLecturer().getId() : null)

@@ -60,7 +60,7 @@ public final class UserManagementMapper {
                 map.put("MANAGE_TERMS", "FULL_ACCESS");
                 map.put("MANAGE_COMPANIES", "READ_ONLY");
                 map.put("MANAGE_CANDIDATES", "FULL_ACCESS");
-                map.put("MANAGE_LETTERS", "FULL_ACCESS");
+                map.put("MANAGE_LETTERS", "READ_ONLY");
                 map.put("MANAGE_TEMPLATES", "FULL_ACCESS");
                 map.put("MANAGE_BLOG", "READ_ONLY");
                 map.put("MANAGE_STORAGE", "NO_ACCESS");
@@ -90,11 +90,11 @@ public final class UserManagementMapper {
                 map.put("MANAGE_STORAGE", "NO_ACCESS");
                 map.put("MANAGE_SYSTEM", "NO_ACCESS");
             }
-            case BLOG_MANAGER -> {
+            case SCHOOL_OFFICE -> {
                 map.put("MANAGE_USERS", "NO_ACCESS");
                 map.put("MANAGE_DEPARTMENTS", "READ_ONLY");
                 map.put("MANAGE_TERMS", "READ_ONLY");
-                map.put("MANAGE_COMPANIES", "READ_ONLY");
+                map.put("MANAGE_COMPANIES", "FULL_ACCESS");
                 map.put("MANAGE_CANDIDATES", "NO_ACCESS");
                 map.put("MANAGE_LETTERS", "FULL_ACCESS");
                 map.put("MANAGE_TEMPLATES", "READ_ONLY");

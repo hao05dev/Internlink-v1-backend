@@ -10,7 +10,6 @@ import com.internlink.core.presentation.recruitment.dto.request.JobPositionReque
 import com.internlink.core.presentation.recruitment.dto.response.JobPositionResponse;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.JobType;
-import com.internlink.core.shared.enums.UserRole;
 import com.internlink.core.shared.enums.VerificationStatus;
 import com.internlink.core.shared.exception.BadRequestException;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
@@ -99,9 +98,7 @@ public class JobPositionWriteService {
                 ? request.getApplicationDeadline()
                 : (term != null ? term.getApplicationDeadline() : null);
 
-        boolean isAutoApproved = createdBy.getRole() == UserRole.BLOG_MANAGER
-                || createdBy.getRole() == UserRole.FACULTY_ADMIN
-                || ResourceAuthorization.isAdmin(createdBy);
+        boolean isAutoApproved = ResourceAuthorization.actsForSchool(createdBy);
 
         JobPosition.JobPositionBuilder jobBuilder =
                 JobPosition.builder()
@@ -161,9 +158,7 @@ public class JobPositionWriteService {
         if (job.getStatus() == JobStatus.CLOSED) {
             throw new BadRequestException("Không thể chỉnh sửa vị trí tuyển dụng đã đóng");
         }
-        boolean isStaff = ResourceAuthorization.isAdmin(actor)
-                || actor.getRole() == UserRole.BLOG_MANAGER
-                || actor.getRole() == UserRole.FACULTY_ADMIN;
+        boolean isStaff = ResourceAuthorization.actsForSchool(actor);
 
         if (!isStaff && job.getStatus() != JobStatus.DRAFT && job.getStatus() != JobStatus.REJECTED) {
             throw new BadRequestException(

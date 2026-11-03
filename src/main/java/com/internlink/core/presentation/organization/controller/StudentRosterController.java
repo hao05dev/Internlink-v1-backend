@@ -1,12 +1,14 @@
 package com.internlink.core.presentation.organization.controller;
 
 import com.internlink.core.application.organization.GoogleSheetRosterService;
+import com.internlink.core.application.organization.RosterLecturerAssignmentService;
 import com.internlink.core.application.organization.StudentRosterService;
 import com.internlink.core.infrastructure.security.CustomUserDetail;
-import com.internlink.core.presentation.organization.dto.request.IneligibleNoticeRequest;
+import com.internlink.core.presentation.organization.dto.request.RosterLecturerAssignRequest;
+import com.internlink.core.presentation.organization.dto.request.RosterSelectionRequest;
 import com.internlink.core.presentation.organization.dto.request.StudentRosterImportItem;
 import com.internlink.core.presentation.organization.dto.response.BatchProvisionResponse;
-import com.internlink.core.presentation.organization.dto.response.IneligibleNoticeResponse;
+import com.internlink.core.presentation.organization.dto.response.BulkRosterLecturerResponse;
 import com.internlink.core.presentation.organization.dto.response.StudentRosterResponse;
 import com.internlink.core.shared.api.ApiResponse;
 import com.internlink.core.shared.validation.ImportRowLimit;
@@ -28,6 +30,7 @@ public class StudentRosterController {
 
     private final StudentRosterService rosterService;
     private final GoogleSheetRosterService googleSheetRosterService;
+    private final RosterLecturerAssignmentService lecturerAssignmentService;
 
     public record GoogleSheetImportRequest(String spreadsheetId, String range) {}
 
@@ -75,25 +78,44 @@ public class StudentRosterController {
     @PostMapping("/by-term/{termId}/batch-provision")
     @PreAuthorize("hasRole('FACULTY_ADMIN')")
     public ResponseEntity<ApiResponse<BatchProvisionResponse>> batchProvisionEligibleAccounts(
-            @PathVariable UUID termId
+            @PathVariable UUID termId,
+            @RequestBody(required = false) RosterSelectionRequest request
     ) {
-        BatchProvisionResponse response = rosterService.batchProvisionEligibleAccounts(termId);
-        String msg = String.format("Đã xử lý tạo tài khoản cho %d sinh viên đủ điều kiện (Mới: %d, Đã liên kết: %d)",
-                response.getTotalEligibleWithoutAccount(), response.getNewlyCreatedCount(), response.getLinkedExistingCount());
+        BatchProvisionResponse response = rosterService.batchProvisionEligibleAccounts(
+                termId, request != null ? request.getRosterIds() : null);
+        String msg = String.format("Đã xử lý tạo tài khoản cho %d sinh viên (Mới: %d, Đã liên kết: %d)",
+                response.getTotalWithoutAccount(), response.getNewlyCreatedCount(), response.getLinkedExistingCount());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(msg, response));
     }
 
-    @PostMapping("/by-term/{termId}/ineligible-notice")
+    @PatchMapping("/{rosterId}/lecturer")
     @PreAuthorize("hasRole('FACULTY_ADMIN')")
-    public ResponseEntity<ApiResponse<IneligibleNoticeResponse>> notifyIneligibleStudents(
-            @PathVariable UUID termId,
-            @RequestBody IneligibleNoticeRequest request
+    public ResponseEntity<ApiResponse<StudentRosterResponse>> assignLecturer(
+            @PathVariable UUID rosterId,
+            @Valid @RequestBody RosterLecturerAssignRequest request
     ) {
-        IneligibleNoticeResponse response = rosterService.notifyIneligibleStudents(termId, request);
-        String msg = String.format("Đã gửi thông báo cho %d sinh viên chưa đủ điều kiện (%d emails, %d thông báo hệ thống)",
-                response.getTotalIneligible(), response.getEmailsSent(), response.getNotificationsCreated());
-        return ResponseEntity.ok(ApiResponse.success(msg, response));
+        StudentRosterResponse response = lecturerAssignmentService.assign(rosterId, request.getLecturerId(), request.getReason());
+        return ResponseEntity.ok(ApiResponse.success("Đã phân công GVHD", response));
+    }
+
+    @PatchMapping("/by-term/{termId}/lecturer")
+    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    public ResponseEntity<ApiResponse<BulkRosterLecturerResponse>> assignLecturerBulk(
+            @PathVariable UUID termId,
+            @Valid @RequestBody RosterLecturerAssignRequest request
+    ) {
+        BulkRosterLecturerResponse response = lecturerAssignmentService.assignBulk(
+                termId, request.getRosterIds(), request.getLecturerId(), request.getReason());
+        return ResponseEntity.ok(ApiResponse.success(
+                "Đã phân công GVHD cho " + response.updated() + " sinh viên", response));
+    }
+
+    @DeleteMapping("/{rosterId}/lecturer")
+    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    public ResponseEntity<ApiResponse<StudentRosterResponse>> unassignLecturer(@PathVariable UUID rosterId) {
+        StudentRosterResponse response = lecturerAssignmentService.unassign(rosterId);
+        return ResponseEntity.ok(ApiResponse.success("Đã gỡ phân công GVHD", response));
     }
 
     @GetMapping("/my-supervision")

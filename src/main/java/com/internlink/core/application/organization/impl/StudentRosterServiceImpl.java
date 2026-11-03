@@ -1,5 +1,6 @@
 package com.internlink.core.application.organization.impl;
 
+import com.internlink.core.domain.placement.InternshipDurationRule;
 import com.internlink.core.application.organization.StudentRosterService;
 import com.internlink.core.application.system.AuditLogService;
 import com.internlink.core.domain.organization.AcademicProgram;
@@ -9,10 +10,8 @@ import com.internlink.core.infrastructure.persistence.jpa.JpaAcademicProgramRepo
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipTermRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
-import com.internlink.core.presentation.organization.dto.request.IneligibleNoticeRequest;
 import com.internlink.core.presentation.organization.dto.request.StudentRosterImportItem;
 import com.internlink.core.presentation.organization.dto.response.BatchProvisionResponse;
-import com.internlink.core.presentation.organization.dto.response.IneligibleNoticeResponse;
 import com.internlink.core.presentation.organization.dto.response.StudentRosterResponse;
 import com.internlink.core.shared.enums.UserRole;
 import com.internlink.core.shared.exception.BadRequestException;
@@ -24,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +33,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StudentRosterServiceImpl implements StudentRosterService {
 
+    private static final BigDecimal MAX_GPA = new BigDecimal("4.0");
+
     private final JpaStudentRosterRepository rosterRepository;
     private final JpaInternshipTermRepository termRepository;
     private final JpaAcademicProgramRepository programRepository;
@@ -41,7 +43,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
     private final AuditLogService auditLogService;
     private final StudentRosterMapper mapper;
     private final StudentRosterAccountProvisioner accountProvisioner;
-    private final StudentRosterIneligibleNotifier ineligibleNotifier;
+    private final RosterAttemptHistoryResolver attemptHistory;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,7 +56,8 @@ public class StudentRosterServiceImpl implements StudentRosterService {
                         || (actor.getRole() == UserRole.LECTURER
                         && actor.getDepartment() != null
                         && actor.getDepartment().getId().equals(term.getDepartment().getId())));
-        return rosterRepository.findByTermId(termId).stream().map(mapper::mapToResponse).toList();
+        List<StudentRoster> rosters = rosterRepository.findByTermId(termId);
+        return withAttemptHistory(term, rosters);
     }
 
     @Override
@@ -89,7 +92,6 @@ public class StudentRosterServiceImpl implements StudentRosterService {
             String cleanYear = sanitizeString(item.getAcademicYear());
             String cleanClass = sanitizeString(item.getClassCode());
             String cleanCourse = sanitizeString(item.getInternshipCourseCode()).toUpperCase();
-            String cleanNote = sanitizeString(item.getEligibilityNote());
 
             StudentRoster roster = rosterRepository
                     .findByTermIdAndStudentCode(termId, cleanStudentCode)
@@ -104,8 +106,10 @@ public class StudentRosterServiceImpl implements StudentRosterService {
             roster.setAcademicYear(cleanYear);
             roster.setClassCode(cleanClass);
             roster.setInternshipCourseCode(cleanCourse);
-            roster.setEligibilityStatus(item.getEligibilityStatus());
-            roster.setEligibilityNote(cleanNote);
+            if (item.getInternshipCredits() != null) {
+                InternshipDurationRule.requireValidCredits(item.getInternshipCredits());
+                roster.setInternshipCredits(item.getInternshipCredits());
+            }
             roster.setGpa(item.getGpa());
             if (item.getPhoneNumber() != null && !item.getPhoneNumber().isBlank()) {
                 roster.setPhoneNumber(sanitizeString(item.getPhoneNumber()));
@@ -128,10 +132,12 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         }
 
         List<StudentRoster> saved = rosterRepository.saveAll(rostersToSave);
+        List<StudentRosterResponse> responses = withAttemptHistory(term, saved);
+        long repeatCount = responses.stream().filter(r -> r.getAttemptNumber() > 1).count();
         auditLogService.logAction(
                 securityGuard.currentUser().getId(), "IMPORT_STUDENT_ROSTER", "InternshipTerm", termId,
-                "SUCCESS", Map.of("count", saved.size()), null);
-        return saved.stream().map(mapper::mapToResponse).toList();
+                "SUCCESS", Map.of("count", saved.size(), "repeatCount", repeatCount), null);
+        return responses;
     }
 
     @Override
@@ -149,7 +155,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
 
     @Override
     @Transactional
-    public BatchProvisionResponse batchProvisionEligibleAccounts(UUID termId) {
+    public BatchProvisionResponse batchProvisionEligibleAccounts(UUID termId, List<UUID> rosterIds) {
         InternshipTerm term = termRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
@@ -157,20 +163,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         ResourceAuthorization.require(
                 ResourceAuthorization.managesDepartment(actor, term.getDepartment().getId()));
 
-        return accountProvisioner.batchProvisionEligible(term, actor.getId());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public IneligibleNoticeResponse notifyIneligibleStudents(UUID termId, IneligibleNoticeRequest request) {
-        InternshipTerm term = termRepository.findById(termId)
-                .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
-        TermGuard.requireNotClosed(term);
-        var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor, term.getDepartment().getId()));
-
-        return ineligibleNotifier.notifyIneligible(term, request);
+        return accountProvisioner.batchProvisionEligible(term, actor.getId(), rosterIds);
     }
 
     @Override
@@ -183,6 +176,12 @@ public class StudentRosterServiceImpl implements StudentRosterService {
             return null;
         }
         return mapper.mapToResponse(roster);
+    }
+
+    private List<StudentRosterResponse> withAttemptHistory(InternshipTerm term, List<StudentRoster> rosters) {
+        List<StudentRosterResponse> responses = rosters.stream().map(mapper::mapToResponse).toList();
+        attemptHistory.enrich(term, rosters, responses);
+        return responses;
     }
 
     private String sanitizeString(String input) {
@@ -205,6 +204,11 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         }
         if (item.getInternshipCourseCode() == null || item.getInternshipCourseCode().isBlank()) {
             throw new BadRequestException("Cần mã học phần thực tập theo chương trình đào tạo");
+        }
+        if (item.getGpa() == null
+                || item.getGpa().compareTo(BigDecimal.ZERO) < 0
+                || item.getGpa().compareTo(MAX_GPA) > 0) {
+            throw new BadRequestException("Điểm GPA của sinh viên " + item.getStudentCode() + " phải nằm trong khoảng 0.0 - 4.0");
         }
     }
 }

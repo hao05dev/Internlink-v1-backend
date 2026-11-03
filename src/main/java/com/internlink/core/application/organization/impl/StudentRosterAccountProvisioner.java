@@ -11,7 +11,6 @@ import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterReposi
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
 import com.internlink.core.presentation.organization.dto.response.BatchProvisionResponse;
 import com.internlink.core.presentation.organization.dto.response.StudentRosterResponse;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.enums.UserRole;
 import com.internlink.core.shared.exception.BadRequestException;
 import com.internlink.core.shared.security.SecurityGuard;
@@ -22,7 +21,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
+import com.internlink.core.application.organization.RosterSelection;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -46,9 +47,6 @@ public class StudentRosterAccountProvisioner {
     private final AccountActivationTokenService activationTokens;
 
     public StudentRosterResponse provisionSingleAccount(StudentRoster roster, StudentRosterMapper mapper) {
-        if (roster.getEligibilityStatus() != EligibilityStatus.ELIGIBLE) {
-            throw new BadRequestException("Chỉ cấp tài khoản cho sinh viên đủ điều kiện");
-        }
         if (roster.getClaimedUser() != null) {
             throw new BadRequestException("Sinh viên này đã có tài khoản hệ thống (MSSV: " + roster.getStudentCode() + ")");
         }
@@ -61,6 +59,7 @@ public class StudentRosterAccountProvisioner {
             roster.setClaimedAt(OffsetDateTime.now());
             rosterRepository.save(roster);
             ensureStudentProfile(existing, roster);
+            sendActivationIfNeverActivated(existing, roster, roster.getTerm().getTermName());
             auditLogService.logAction(
                     securityGuard.currentUser().getId(), "LINK_ROSTER_TO_EXISTING_USER",
                     "StudentRoster", roster.getId(), "SUCCESS",
@@ -86,14 +85,7 @@ public class StudentRosterAccountProvisioner {
         rosterRepository.save(roster);
         ensureStudentProfile(saved, roster);
 
-        String activationUrl = activationTokens.issue(saved);
-        emailNotifier.sendProvisionEmail(
-                email,
-                roster.getFullName(),
-                roster.getStudentCode(),
-                activationUrl,
-                activationTokens.ttlHours(),
-                roster.getTerm().getTermName());
+        sendActivation(saved, roster, roster.getTerm().getTermName());
 
         auditLogService.logAction(
                 securityGuard.currentUser().getId(), "PROVISION_STUDENT_ACCOUNT",
@@ -103,14 +95,15 @@ public class StudentRosterAccountProvisioner {
         return mapper.mapToResponse(roster);
     }
 
-    public BatchProvisionResponse batchProvisionEligible(InternshipTerm term, UUID actorId) {
-        List<StudentRoster> eligibleWithoutAccount = rosterRepository.findByTermId(term.getId()).stream()
-                .filter(r -> r.getEligibilityStatus() == EligibilityStatus.ELIGIBLE && r.getClaimedUser() == null)
+    public BatchProvisionResponse batchProvisionEligible(InternshipTerm term, UUID actorId, Collection<UUID> rosterIds) {
+        List<StudentRoster> withoutAccount = rosterRepository.findByTermId(term.getId()).stream()
+                .filter(RosterSelection.of(rosterIds))
+                .filter(r -> r.getClaimedUser() == null)
                 .toList();
 
-        if (eligibleWithoutAccount.isEmpty()) {
+        if (withoutAccount.isEmpty()) {
             return BatchProvisionResponse.builder()
-                    .totalEligibleWithoutAccount(0)
+                    .totalWithoutAccount(0)
                     .newlyCreatedCount(0)
                     .linkedExistingCount(0)
                     .accounts(List.of())
@@ -122,7 +115,7 @@ public class StudentRosterAccountProvisioner {
         List<BatchProvisionResponse.ProvisionedStudentAccountDto> accountDtos = new ArrayList<>();
         List<StudentRoster> rostersToUpdate = new ArrayList<>();
 
-        for (StudentRoster roster : eligibleWithoutAccount) {
+        for (StudentRoster roster : withoutAccount) {
             String email = roster.getOfficialEmail().trim().toLowerCase();
             if (userRepository.existsByEmail(email)) {
                 User existing = userRepository.findByEmail(email).orElseThrow();
@@ -131,6 +124,7 @@ public class StudentRosterAccountProvisioner {
                 roster.setClaimedAt(OffsetDateTime.now());
                 rostersToUpdate.add(roster);
                 ensureStudentProfile(existing, roster);
+                sendActivationIfNeverActivated(existing, roster, term.getTermName());
                 linkedExisting++;
                 accountDtos.add(BatchProvisionResponse.ProvisionedStudentAccountDto.builder()
                         .studentCode(roster.getStudentCode())
@@ -158,14 +152,7 @@ public class StudentRosterAccountProvisioner {
                 ensureStudentProfile(saved, roster);
                 newlyCreated++;
 
-                String activationUrl = activationTokens.issue(saved);
-                emailNotifier.sendProvisionEmail(
-                        email,
-                        roster.getFullName(),
-                        roster.getStudentCode(),
-                        activationUrl,
-                        activationTokens.ttlHours(),
-                        term.getTermName());
+                sendActivation(saved, roster, term.getTermName());
 
                 accountDtos.add(BatchProvisionResponse.ProvisionedStudentAccountDto.builder()
                         .studentCode(roster.getStudentCode())
@@ -179,14 +166,34 @@ public class StudentRosterAccountProvisioner {
         rosterRepository.saveAll(rostersToUpdate);
         auditLogService.logAction(
                 actorId, "BATCH_PROVISION_STUDENT_ACCOUNTS", "InternshipTerm", term.getId(), "SUCCESS",
-                Map.of("total", eligibleWithoutAccount.size(), "newlyCreated", newlyCreated, "linkedExisting", linkedExisting), null);
+                Map.of("total", withoutAccount.size(), "newlyCreated", newlyCreated, "linkedExisting", linkedExisting), null);
 
         return BatchProvisionResponse.builder()
-                .totalEligibleWithoutAccount(eligibleWithoutAccount.size())
+                .totalWithoutAccount(withoutAccount.size())
                 .newlyCreatedCount(newlyCreated)
                 .linkedExistingCount(linkedExisting)
                 .accounts(accountDtos)
                 .build();
+    }
+
+    /**
+     * Tài khoản có sẵn (tạo ngoài luồng cấp phát) mà chưa từng đăng nhập hay đặt mật khẩu thì sinh viên
+     * không biết mật khẩu, nên vẫn cần liên kết kích hoạt như tài khoản mới.
+     */
+    private void sendActivationIfNeverActivated(User user, StudentRoster roster, String termName) {
+        if (user.getLastLoginAt() == null && user.getPasswordChangedAt() == null) {
+            sendActivation(user, roster, termName);
+        }
+    }
+
+    private void sendActivation(User user, StudentRoster roster, String termName) {
+        emailNotifier.sendProvisionEmail(
+                user.getEmail(),
+                roster.getFullName(),
+                roster.getStudentCode(),
+                activationTokens.issue(user),
+                activationTokens.ttlHours(),
+                termName);
     }
 
     private void requireStudentInDepartment(User user, StudentRoster roster) {

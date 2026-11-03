@@ -78,8 +78,6 @@ class NotificationJpaPostgresTest {
         UUID term = jdbc.queryForObject("SELECT id FROM internship_terms LIMIT 1", UUID.class);
         for (String audience :
                 java.util.List.of(
-                        "ELIGIBLE",
-                        "INELIGIBLE",
                         "ALL_STUDENTS",
                         "MENTORS",
                         "LECTURERS",

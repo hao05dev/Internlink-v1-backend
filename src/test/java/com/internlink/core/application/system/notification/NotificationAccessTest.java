@@ -53,6 +53,23 @@ class NotificationAccessTest {
         assertThatThrownBy(()->service.markAsRead(n.getId(),UUID.randomUUID())).isInstanceOf(ForbiddenException.class);
         verify(repository,never()).save(any());
     }
+    @Test void anotherRecipientCannotViewDetail() {
+        var owner=User.builder().build(); owner.setId(UUID.randomUUID());
+        var n=Notification.builder().id(UUID.randomUUID()).recipient(owner).build();
+        when(repository.findById(n.getId())).thenReturn(Optional.of(n));
+        assertThatThrownBy(()->service.getById(n.getId(),UUID.randomUUID())).isInstanceOf(ForbiddenException.class);
+    }
+    @Test void ownerViewsDetailWithoutMarkingRead() {
+        var owner=User.builder().build(); owner.setId(UUID.randomUUID());
+        var n=Notification.builder().id(UUID.randomUUID()).recipient(owner).notificationType("LOGBOOK_APPROVED")
+            .title("Nhật ký đã duyệt").message("Nội dung").actionUrl("/student/weekly-logs").isRead(false).build();
+        when(repository.findById(n.getId())).thenReturn(Optional.of(n));
+        var detail=service.getById(n.getId(),owner.getId());
+        assertThat(detail.getId()).isEqualTo(n.getId());
+        assertThat(detail.getActionUrl()).isEqualTo("/student/weekly-logs");
+        assertThat(detail.getIsRead()).isFalse();
+        verify(repository,never()).save(any());
+    }
     @Test void repeatedReadPreservesOriginalTimestamp() {
         var owner=User.builder().build(); owner.setId(UUID.randomUUID()); var timestamp=OffsetDateTime.now().minusDays(1);
         var n=Notification.builder().id(UUID.randomUUID()).recipient(owner).notificationType("SYSTEM_TEST").isRead(true).readAt(timestamp).build();

@@ -12,7 +12,7 @@ public final class NotificationLinks {
             case COMPANY_REP -> "/company/interns";
             case FACULTY_ADMIN -> "/faculty/internship-management";
             case ADMIN -> "/admin/dashboard";
-            case BLOG_MANAGER -> "/blog-manager/posts";
+            case SCHOOL_OFFICE -> "/school-office/acceptance-forms";
         };
         if (path.startsWith("/agreements/")) return role == UserRole.STUDENT ? "/student/learning-agreement" : home(role);
         if (path.startsWith("/final-results/placement/")) return role == UserRole.STUDENT ? "/student/final-report" : home(role);
@@ -23,7 +23,7 @@ public final class NotificationLinks {
         if (path.startsWith("/mentor/") && role != UserRole.COMPANY_MENTOR) return home(role);
         if (path.startsWith("/lecturer/") && role != UserRole.LECTURER) return home(role);
         if (path.startsWith("/admin/") && role != UserRole.ADMIN) return home(role);
-        if (path.startsWith("/blog-manager/") && role != UserRole.BLOG_MANAGER) return home(role);
+        if (path.startsWith("/school-office/") && role != UserRole.SCHOOL_OFFICE) return home(role);
         return path;
     }
     public static String home(UserRole role) {
@@ -34,7 +34,7 @@ public final class NotificationLinks {
             case COMPANY_REP -> "/company/dashboard";
             case FACULTY_ADMIN -> "/faculty/dashboard";
             case ADMIN -> "/admin/dashboard";
-            case BLOG_MANAGER -> "/blog-manager/posts";
+            case SCHOOL_OFFICE -> "/school-office/acceptance-forms";
         };
     }
 }

@@ -140,7 +140,6 @@ class NotificationCampaignPostgresTest {
                         .fullName(student.getFullName())
                         .academicYear("2026")
                         .claimedUser(student)
-                        .eligibilityStatus(EligibilityStatus.ELIGIBLE)
                         .build());
         login(faculty);
         email.setEnabled(true);
@@ -167,7 +166,7 @@ class NotificationCampaignPostgresTest {
                 term.getId(),
                 key,
                 "INTRODUCTION_LETTER",
-                "ELIGIBLE",
+                "ALL_STUDENTS",
                 subject,
                 "Chào {{studentName}}, kỳ {{termName}}",
                 "BOTH",

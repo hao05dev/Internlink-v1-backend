@@ -39,7 +39,7 @@ public class IntroductionLetterController {
     }
 
     @PatchMapping("/{id}/review")
-    @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN', 'BLOG_MANAGER')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
     public ApiResponse<IntroductionLetterResponse> review(
             @PathVariable UUID id,
             @Valid @RequestBody ReviewIntroductionLetterRequest request
@@ -48,25 +48,25 @@ public class IntroductionLetterController {
     }
 
     @PatchMapping("/{id}/confirm-received")
-    @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN', 'BLOG_MANAGER')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
     public ApiResponse<IntroductionLetterResponse> confirmReceived(@PathVariable UUID id) {
         return ApiResponse.success(service.confirmReceived(id));
     }
 
     @PatchMapping("/roster/{rosterId}/toggle")
-    @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN', 'BLOG_MANAGER')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
     public ApiResponse<IntroductionLetterResponse> toggleRosterLetterReceived(@PathVariable UUID rosterId) {
         return ApiResponse.success(service.toggleRosterLetterReceived(rosterId));
     }
 
     @PostMapping("/batch-confirm")
-    @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN', 'BLOG_MANAGER')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
     public ApiResponse<List<IntroductionLetterResponse>> batchConfirm(@RequestBody List<UUID> rosterIds) {
         return ApiResponse.success(service.batchConfirmRosterLetterReceived(rosterIds));
     }
 
     @GetMapping("/term/{termId}")
-    @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN', 'LECTURER', 'BLOG_MANAGER')")
+    @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN', 'LECTURER', 'SCHOOL_OFFICE')")
     public ApiResponse<List<IntroductionLetterResponse>> byTerm(@PathVariable UUID termId) {
         return ApiResponse.success(service.byTerm(termId));
     }

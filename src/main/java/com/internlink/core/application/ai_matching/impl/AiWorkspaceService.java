@@ -156,7 +156,9 @@ public class AiWorkspaceService {
         return Map.of(
                 "terms",
                 visibleTerms.stream()
-                        .map(t -> Map.of("id", t.getId(), "name", t.getTermName()))
+                        // Active terms first so screens default to the term in progress.
+                        .sorted(Comparator.comparing((InternshipTerm t) -> t.getStatus() != TermStatus.ACTIVE))
+                        .map(AiTermOptions::of)
                         .toList(),
                 "jobs",
                 visibleJobs.stream()

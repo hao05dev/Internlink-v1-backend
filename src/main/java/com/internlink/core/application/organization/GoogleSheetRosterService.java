@@ -1,5 +1,6 @@
 package com.internlink.core.application.organization;
 
+import com.internlink.core.domain.placement.InternshipDurationRule;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.internlink.core.infrastructure.integration.google.GoogleWorkspaceClient;
 import com.internlink.core.infrastructure.persistence.jpa.JpaAcademicProgramRepository;
@@ -7,7 +8,6 @@ import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipTermRepos
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
 import com.internlink.core.presentation.organization.dto.request.StudentRosterImportItem;
 import com.internlink.core.presentation.organization.dto.response.StudentRosterResponse;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.exception.BadRequestException;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
 import com.internlink.core.shared.security.ResourceAuthorization;
@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,7 +58,7 @@ public class GoogleSheetRosterService {
         Map<String, Integer> headers = new HashMap<>();
         for (int i = 0; i < rows.get(0).size(); i++)
             headers.put(rows.get(0).get(i).asText().trim().toLowerCase(Locale.ROOT), i);
-        for (String required : List.of("studentcode", "fullname", "officialemail", "programcode", "academicyear", "internshipcoursecode"))
+        for (String required : List.of("studentcode", "fullname", "officialemail", "programcode", "academicyear", "internshipcoursecode", "gpa"))
             if (!headers.containsKey(required)) throw new BadRequestException("Google Sheet thiếu cột " + required);
         List<StudentRosterImportItem> items = new ArrayList<>();
         Set<String> studentCodes = new HashSet<>();
@@ -69,25 +71,43 @@ public class GoogleSheetRosterService {
             int lineNumber = rowIndex + 1;
             var program = programs.findByCode(programCode)
                 .orElseThrow(() -> new BadRequestException("Không tìm thấy ngành " + programCode + " ở dòng " + lineNumber));
-            EligibilityStatus eligibility;
-            try {
-                String raw = cell(row, headers, "eligibilitystatus");
-                eligibility = raw.isBlank() ? EligibilityStatus.ELIGIBLE : EligibilityStatus.valueOf(raw.toUpperCase(Locale.ROOT));
-            } catch (IllegalArgumentException error) {
-                throw new BadRequestException("Trạng thái đủ điều kiện không hợp lệ ở dòng " + (rowIndex + 1));
-            }
             items.add(StudentRosterImportItem.builder()
                 .programId(program.getId()).studentCode(code)
                 .fullName(cell(row, headers, "fullname"))
                 .officialEmail(cell(row, headers, "officialemail"))
                 .academicYear(cell(row, headers, "academicyear"))
                 .internshipCourseCode(cell(row, headers, "internshipcoursecode"))
+                .internshipCredits(parseCredits(cell(row, headers, "internshipcredits"), lineNumber))
+                .gpa(parseGpa(cell(row, headers, "gpa"), lineNumber))
                 .classCode(cell(row, headers, "classcode"))
-                .eligibilityStatus(eligibility).eligibilityNote(cell(row, headers, "eligibilitynote"))
+                .phoneNumber(cell(row, headers, "phonenumber"))
+                .lecturerCode(cell(row, headers, "lecturercode"))
+                .lecturerName(cell(row, headers, "lecturername"))
+                .lecturerEmail(cell(row, headers, "lectureremail"))
                 .build());
         }
         if (items.isEmpty()) throw new BadRequestException("Google Sheet không có sinh viên hợp lệ");
         return rosterService.importRosterList(termId, items);
+    }
+
+    private BigDecimal parseGpa(String raw, int lineNumber) {
+        if (raw.isBlank()) throw new BadRequestException("Thiếu điểm GPA ở dòng " + lineNumber);
+        try {
+            return new BigDecimal(raw.replace(',', '.')).setScale(2, RoundingMode.HALF_UP);
+        } catch (NumberFormatException e) {
+            throw new BadRequestException("Điểm GPA không hợp lệ ở dòng " + lineNumber);
+        }
+    }
+
+    private Integer parseCredits(String raw, int lineNumber) {
+        if (raw.isBlank()) return null;
+        try {
+            int credits = Integer.parseInt(raw);
+            InternshipDurationRule.requireValidCredits(credits);
+            return credits;
+        } catch (NumberFormatException | BadRequestException e) {
+            throw new BadRequestException("Số tín chỉ thực tập không hợp lệ ở dòng " + lineNumber + " (chỉ nhận 2, 3 hoặc 5)");
+        }
     }
 
     private String cell(JsonNode row, Map<String, Integer> headers, String header) {

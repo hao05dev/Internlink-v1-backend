@@ -52,7 +52,7 @@ class JobApplicationWorkflowTest extends RecruitmentTestFixture {
         AcademicProgram program = AcademicProgram.builder().code("CNTT").name("CNTT").build();
         StudentProfile profile = StudentProfile.builder().user(student).program(program).build();
         StudentRoster roster =
-                StudentRoster.builder().eligibilityStatus(EligibilityStatus.ELIGIBLE).build();
+                StudentRoster.builder().build();
         Document foreignCv =
                 Document.builder()
                         .owner(user(UserRole.STUDENT))

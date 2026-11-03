@@ -2,6 +2,10 @@ server:
   port: 8080
 
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:./Internlink-v1-backend/.env[.properties]
   application:
     name: internlink-backend-core
   threads:

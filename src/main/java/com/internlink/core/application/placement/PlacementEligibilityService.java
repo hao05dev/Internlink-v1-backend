@@ -5,7 +5,6 @@ import com.internlink.core.domain.organization.StudentRoster;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipPlacementRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaPlacementOfferRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.enums.OfferStatus;
 import com.internlink.core.shared.enums.PlacementStatus;
 import com.internlink.core.shared.enums.UserRole;
@@ -45,7 +44,7 @@ public class PlacementEligibilityService {
     }
 
     /**
-     * Yêu cầu sinh viên phải có tên trong danh sách đăng ký thực tập (Roster) của kỳ và đạt chuẩn ELIGIBLE.
+     * Yêu cầu sinh viên phải có tên trong danh sách đăng ký thực tập (Roster) của kỳ.
      */
     public StudentRoster requireEligibleRoster(UUID studentId, UUID termId) {
         if (termId == null) {
@@ -53,10 +52,6 @@ public class PlacementEligibilityService {
         }
         StudentRoster roster = rosterRepository.findByTermIdAndClaimedUserId(termId, studentId)
                 .orElseThrow(() -> new BadRequestException("Sinh viên chưa có trong danh sách kỳ thực tập này"));
-
-        if (roster.getEligibilityStatus() != EligibilityStatus.ELIGIBLE) {
-            throw new BadRequestException("Sinh viên chưa đủ điều kiện tham gia kỳ thực tập");
-        }
         return roster;
     }
 
@@ -78,6 +73,37 @@ public class PlacementEligibilityService {
         if (hasAcceptedOffer) {
             throw new BadRequestException("Sinh viên đã chấp nhận một đề nghị thực tập khác trong kỳ này");
         }
+    }
+
+    /**
+     * GVHD cho lần thực tập mới: giảng viên được chọn lúc kích hoạt, nếu không có thì dùng GVHD đã gán
+     * trên danh sách đăng ký học phần.
+     */
+    public User resolveLecturer(User chosen, StudentRoster roster) {
+        User lecturer = chosen != null ? chosen : roster != null ? roster.getAssignedLecturer() : null;
+        if (lecturer == null) {
+            throw new BadRequestException("Sinh viên chưa có GVHD trên danh sách học phần, cần phân công giảng viên hướng dẫn");
+        }
+        return lecturer;
+    }
+
+    /** Giữ GVHD trên danh sách học phần trùng với GVHD của lần thực tập. */
+    public void syncRosterLecturer(UUID studentId, UUID termId, User lecturer) {
+        if (studentId == null || termId == null || lecturer == null) {
+            return;
+        }
+        rosterRepository.findByTermIdAndClaimedUserId(termId, studentId).ifPresent(roster -> {
+            if (roster.getAssignedLecturer() != null && roster.getAssignedLecturer().getId().equals(lecturer.getId())) {
+                return;
+            }
+            if (lecturer.getEmail() == null || !lecturer.getEmail().equalsIgnoreCase(roster.getLecturerEmail())) {
+                roster.setLecturerCode(null);
+            }
+            roster.setAssignedLecturer(lecturer);
+            roster.setLecturerName(lecturer.getFullName());
+            roster.setLecturerEmail(lecturer.getEmail());
+            rosterRepository.save(roster);
+        });
     }
 
     /**

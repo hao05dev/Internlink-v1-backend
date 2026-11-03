@@ -70,6 +70,7 @@ public class DocumentAccessPolicy {
                             .map(
                                     app ->
                                             actor.getId().equals(app.getStudent().getId())
+                                                    || ResourceAuthorization.actsForSchool(actor)
                                                     || ResourceAuthorization.managesDepartment(
                                                             actor,
                                                             app.getTerm().getDepartment().getId())

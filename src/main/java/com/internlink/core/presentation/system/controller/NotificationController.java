@@ -38,6 +38,15 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success(count));
     }
 
+    @GetMapping("/{id:[0-9a-fA-F-]{36}}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<NotificationResponse>> getById(
+        @PathVariable UUID id,
+        @AuthenticationPrincipal CustomUserDetail userDetail
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(notificationService.getById(id, userDetail.getId())));
+    }
+
     @PatchMapping("/{id}/read")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<NotificationResponse>> markAsRead(

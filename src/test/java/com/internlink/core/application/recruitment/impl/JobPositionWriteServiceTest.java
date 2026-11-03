@@ -49,7 +49,7 @@ class JobPositionWriteServiceTest extends RecruitmentTestFixture {
         Department department = department();
         InternshipTerm term = term(department);
         Company company = company();
-        User blogManager = user(UserRole.BLOG_MANAGER);
+        User blogManager = user(UserRole.SCHOOL_OFFICE);
         when(companyRepository.findById(company.getId())).thenReturn(Optional.of(company));
         when(termRepository.findById(term.getId())).thenReturn(Optional.of(term));
         when(departmentRepository.findById(department.getId())).thenReturn(Optional.of(department));

@@ -7,7 +7,6 @@ import com.internlink.core.infrastructure.persistence.jpa.*;
 import com.internlink.core.presentation.recruitment.dto.response.JobPositionResponse;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.RequirementType;
-import com.internlink.core.shared.enums.UserRole;
 import com.internlink.core.shared.exception.BadRequestException;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
 import com.internlink.core.shared.security.ResourceAuthorization;
@@ -117,9 +116,7 @@ public class JobPositionLifecycleService {
                                                 "User", "id", approvedByUserId));
         ResourceAuthorization.require(
                 approvedByUserId.equals(securityGuard.currentUser().getId())
-                        && approver.getRole() == UserRole.FACULTY_ADMIN
-                        && ResourceAuthorization.managesDepartment(
-                                approver, job.getDepartment().getId()));
+                        && ResourceAuthorization.actsForSchool(approver));
 
         job.setStatus(status);
         job.setFacultyFeedback(facultyFeedback);

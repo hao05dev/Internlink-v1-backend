@@ -9,6 +9,7 @@ import com.internlink.core.shared.enums.PlacementStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -50,12 +51,19 @@ public class PlacementNotificationHelper {
 
     public void logAndNotifyLecturerAssignment(UUID actorId, InternshipPlacement placement, User lecturer, UUID previousId) {
         auditLogService.logAction(actorId, "ASSIGN_LECTURER", "InternshipPlacement", placement.getId(),
-            "SUCCESS", Map.of("previousLecturerId", previousId, "lecturerId", lecturer.getId()), null);
+            "SUCCESS", lecturerChange(previousId, lecturer.getId()), null);
         notificationService.sendNotification(lecturer.getId(), "LECTURER_ASSIGNED", "Phân công hướng dẫn thực tập",
             "Bạn được phân công hướng dẫn sinh viên " + placement.getStudent().getFullName(),
             "/lecturer/supervision");
         notificationService.sendNotification(placement.getStudent().getId(), "LECTURER_ASSIGNED", "Giảng viên hướng dẫn",
             "Giảng viên hướng dẫn của bạn là " + lecturer.getFullName(), "/student/dashboard");
+    }
+
+    private static Map<String, Object> lecturerChange(UUID previousId, UUID lecturerId) {
+        Map<String, Object> changes = new HashMap<>();
+        changes.put("previousLecturerId", previousId);
+        changes.put("lecturerId", lecturerId);
+        return changes;
     }
 
     public void logAndNotifyStatusChange(InternshipPlacement saved, PlacementStatus previousStatus, PlacementStatus newStatus) {

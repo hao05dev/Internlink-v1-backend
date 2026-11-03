@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,11 +39,13 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
 
     @Override
     @Transactional(readOnly = true)
+    // Cached in Redis with NON_FINAL default typing: Stream.toList() returns a final JDK class
+    // that is written without a type id and cannot be read back, so collect into an ArrayList.
     @Cacheable(value = "academic_programs", key = "'all'")
     public List<AcademicProgramResponse> getAllPrograms() {
         return programRepository.findAll().stream()
             .map(this::mapToResponse)
-            .toList();
+            .collect(Collectors.toList());
     }
 
     @Override
@@ -59,7 +62,7 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
     public List<AcademicProgramResponse> getProgramsByDepartment(UUID departmentId) {
         return programRepository.findByDepartmentId(departmentId).stream()
             .map(this::mapToResponse)
-            .toList();
+            .collect(Collectors.toList());
     }
 
     @Override

@@ -19,6 +19,8 @@ public interface NotificationService {
 
     List<NotificationResponse> getMyNotifications(UUID recipientId);
 
+    NotificationResponse getById(UUID id, UUID recipientId);
+
     long countUnreadNotifications(UUID recipientId);
 
     NotificationResponse markAsRead(UUID id, UUID recipientId);

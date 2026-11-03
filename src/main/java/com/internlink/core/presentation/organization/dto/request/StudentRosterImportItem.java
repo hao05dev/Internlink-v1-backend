@@ -1,6 +1,7 @@
 package com.internlink.core.presentation.organization.dto.request;
 
-import com.internlink.core.shared.enums.EligibilityStatus;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -37,10 +38,8 @@ public class StudentRosterImportItem {
     @NotBlank(message = "Mã học phần thực tập không được để trống")
     private String internshipCourseCode;
 
-    @Builder.Default
-    private EligibilityStatus eligibilityStatus = EligibilityStatus.ELIGIBLE;
-
-    private String eligibilityNote;
+    /** Số tín chỉ học phần thực tập (2, 3 hoặc 5), không bắt buộc. */
+    private Integer internshipCredits;
 
     private String lecturerCode;
 
@@ -48,6 +47,9 @@ public class StudentRosterImportItem {
 
     private String lecturerEmail;
 
+    @NotNull(message = "Điểm GPA không được để trống")
+    @DecimalMin(value = "0.0", message = "Điểm GPA phải nằm trong khoảng 0.0 - 4.0")
+    @DecimalMax(value = "4.0", message = "Điểm GPA phải nằm trong khoảng 0.0 - 4.0")
     private java.math.BigDecimal gpa;
 
     private String phoneNumber;

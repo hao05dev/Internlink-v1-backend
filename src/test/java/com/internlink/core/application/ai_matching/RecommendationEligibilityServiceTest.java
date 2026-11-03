@@ -7,7 +7,6 @@ import com.internlink.core.domain.recruitment.JobPosition;
 import com.internlink.core.domain.organization.AcademicProgram;
 import com.internlink.core.domain.student.StudentProfile;
 import com.internlink.core.infrastructure.persistence.jpa.*;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.PlacementStatus;
 import com.internlink.core.shared.enums.TermStatus;
@@ -81,7 +80,7 @@ class RecommendationEligibilityServiceTest {
 
     @Test
     void studentTermEligibility_succeedsWhenValid() {
-        StudentRoster roster = StudentRoster.builder().eligibilityStatus(EligibilityStatus.ELIGIBLE).build();
+        StudentRoster roster = StudentRoster.builder().build();
         when(termRepository.findById(termId)).thenReturn(Optional.of(term));
         when(rosterRepository.findByTermIdAndClaimedUserId(termId, studentId)).thenReturn(Optional.of(roster));
         when(placementRepository.findByTermIdAndStudentId(termId, studentId)).thenReturn(List.of());

@@ -79,10 +79,10 @@ public class CompanyServiceImpl implements CompanyService {
             .build();
 
         Company saved = companyRepository.save(company);
-        for (UserRole role : List.of(UserRole.FACULTY_ADMIN, UserRole.ADMIN)) {
+        for (UserRole role : List.of(UserRole.SCHOOL_OFFICE, UserRole.ADMIN)) {
             userRepository.findByRole(role).forEach(user -> notifications.sendNotification(user.getId(), "COMPANY_REGISTERED",
                 "Doanh nghiệp mới chờ thẩm định", saved.getCompanyName() + " đã đăng ký tham gia hệ thống.",
-                role == UserRole.ADMIN ? "/admin/companies" : "/faculty/companies"));
+                role == UserRole.ADMIN ? "/admin/companies" : "/school-office/companies"));
         }
         return mapper.mapToResponse(saved);
     }
@@ -119,7 +119,7 @@ public class CompanyServiceImpl implements CompanyService {
         User verifier = userRepository.findById(verifiedByUserId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", verifiedByUserId));
         ResourceAuthorization.require(verifiedByUserId.equals(securityGuard.currentUser().getId())
-            && verifier.getRole() == UserRole.FACULTY_ADMIN);
+            && ResourceAuthorization.actsForSchool(verifier));
         if (status == VerificationStatus.PENDING) {
             throw new BadRequestException("Kết quả thẩm định không thể là PENDING");
         }

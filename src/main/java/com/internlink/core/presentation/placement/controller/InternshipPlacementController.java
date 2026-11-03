@@ -87,7 +87,7 @@ public class InternshipPlacementController {
     @PreAuthorize("hasRole('FACULTY_ADMIN')")
     public ResponseEntity<ApiResponse<InternshipPlacementResponse>> activatePlacement(
         @RequestParam UUID agreementId,
-        @RequestParam UUID lecturerId
+        @RequestParam(required = false) UUID lecturerId
     ) {
         InternshipPlacementResponse response = placementService.activatePlacementFromAgreement(agreementId, lecturerId);
         return ResponseEntity.status(HttpStatus.CREATED)

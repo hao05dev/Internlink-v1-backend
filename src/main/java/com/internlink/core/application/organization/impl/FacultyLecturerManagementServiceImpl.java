@@ -7,11 +7,10 @@ import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.Department;
 import com.internlink.core.domain.organization.FacultyLecturerQuota;
 import com.internlink.core.domain.organization.InternshipTerm;
-import com.internlink.core.domain.placement.InternshipPlacement;
 import com.internlink.core.infrastructure.persistence.jpa.JpaDepartmentRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaFacultyLecturerQuotaRepository;
-import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipPlacementRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipTermRepository;
+import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
 import com.internlink.core.presentation.organization.dto.request.CreateLecturerRequest;
 import com.internlink.core.presentation.organization.dto.request.LecturerImportItem;
@@ -37,7 +36,7 @@ public class FacultyLecturerManagementServiceImpl implements FacultyLecturerMana
     private final JpaDepartmentRepository departmentRepository;
     private final JpaInternshipTermRepository termRepository;
     private final JpaFacultyLecturerQuotaRepository quotaRepository;
-    private final JpaInternshipPlacementRepository placementRepository;
+    private final JpaStudentRosterRepository rosterRepository;
     private final PasswordEncoder passwordEncoder;
     private final LecturerProvisionEmailNotifier emailNotifier;
     private final AuditLogService auditLogService;
@@ -55,11 +54,9 @@ public class FacultyLecturerManagementServiceImpl implements FacultyLecturerMana
 
         if (termId != null) {
             quotaRepository.findByTermId(termId).forEach(q -> quotaMap.put(q.getLecturer().getId(), q.getMaxStudents()));
-            List<InternshipPlacement> placements = placementRepository.findByTermId(termId);
-            for (InternshipPlacement p : placements) {
-                if (p.getLecturer() != null) {
-                    assignmentCountMap.merge(p.getLecturer().getId(), 1L, Long::sum);
-                }
+            // The roster is the source of truth for supervision; placements keep the same lecturer.
+            for (Object[] row : rosterRepository.countByAssignedLecturerInTerm(termId)) {
+                assignmentCountMap.put((UUID) row[0], (Long) row[1]);
             }
         }
 
@@ -121,9 +118,10 @@ public class FacultyLecturerManagementServiceImpl implements FacultyLecturerMana
         if (term != null) {
             upsertQuota(user, term, maxStudents);
         }
+        int linkedRosters = rosterRepository.linkUnassignedByLecturerEmail(user, email, departmentId);
 
         auditLogService.logAction(actorId, "CREATE_OR_UPDATE_LECTURER", "User", user.getId(), "SUCCESS",
-                Map.of("email", email, "isNew", isNew, "maxStudents", maxStudents), null);
+                Map.of("email", email, "isNew", isNew, "maxStudents", maxStudents, "linkedRosters", linkedRosters), null);
 
         return FacultyLecturerResponse.builder()
                 .id(user.getId())
@@ -133,7 +131,7 @@ public class FacultyLecturerManagementServiceImpl implements FacultyLecturerMana
                 .departmentName(dept.getName())
                 .title(req.getTitle() != null ? req.getTitle() : "Giảng viên")
                 .maxStudents(maxStudents)
-                .assignedCount(0)
+                .assignedCount(term != null ? countAssigned(term.getId(), user.getId()) : 0)
                 .build();
     }
 
@@ -190,6 +188,7 @@ public class FacultyLecturerManagementServiceImpl implements FacultyLecturerMana
                 if (term != null) {
                     upsertQuota(user, term, maxStudents);
                 }
+                rosterRepository.linkUnassignedByLecturerEmail(user, email, departmentId);
             } catch (Exception ex) {
                 log.error("Lỗi khi import GVHD {}: {}", item.getEmail(), ex.getMessage());
                 errors.add(item.getEmail() + ": " + ex.getMessage());
@@ -213,6 +212,13 @@ public class FacultyLecturerManagementServiceImpl implements FacultyLecturerMana
             throw new com.internlink.core.shared.exception.BadRequestException(
                     "Email thuộc tài khoản khác vai trò hoặc khoa; liên hệ quản trị viên.");
         }
+    }
+
+    private int countAssigned(UUID termId, UUID lecturerId) {
+        return rosterRepository.countByAssignedLecturerInTerm(termId).stream()
+                .filter(row -> lecturerId.equals(row[0]))
+                .mapToInt(row -> ((Long) row[1]).intValue())
+                .findFirst().orElse(0);
     }
 
     private void upsertQuota(User lecturer, InternshipTerm term, int maxStudents) {

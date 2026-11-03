@@ -7,7 +7,6 @@ import com.internlink.core.domain.placement.InternshipPlacement;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipPlacementRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaPlacementOfferRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
-import com.internlink.core.shared.enums.EligibilityStatus;
 import com.internlink.core.shared.enums.PlacementStatus;
 import com.internlink.core.shared.enums.UserRole;
 import com.internlink.core.shared.exception.BadRequestException;
@@ -80,26 +79,12 @@ class PlacementEligibilityServiceTest {
     @Test
     void requireEligibleRoster_WhenEligible_ShouldReturnRoster() {
         StudentRoster roster = StudentRoster.builder()
-                .eligibilityStatus(EligibilityStatus.ELIGIBLE)
                 .build();
         when(rosterRepository.findByTermIdAndClaimedUserId(termId, studentId))
                 .thenReturn(Optional.of(roster));
 
         StudentRoster result = eligibilityService.requireEligibleRoster(studentId, termId);
         assertThat(result).isSameAs(roster);
-    }
-
-    @Test
-    void requireEligibleRoster_WhenIneligible_ShouldThrow() {
-        StudentRoster roster = StudentRoster.builder()
-                .eligibilityStatus(EligibilityStatus.INELIGIBLE)
-                .build();
-        when(rosterRepository.findByTermIdAndClaimedUserId(termId, studentId))
-                .thenReturn(Optional.of(roster));
-
-        assertThatThrownBy(() -> eligibilityService.requireEligibleRoster(studentId, termId))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("chưa đủ điều kiện tham gia kỳ thực tập");
     }
 
     @Test
