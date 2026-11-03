@@ -40,7 +40,7 @@ class GmailSmtpSenderTest {
                                         UUID.randomUUID(),
                                         "user@example.edu",
                                         "Tiêu đề",
-                                        "Nội dung"),
+                                        "Nội dung", null),
                         EmailDeliveryException.class);
         assertThat(error.retryable()).isFalse();
         assertThat(error.ambiguous()).isFalse();
@@ -56,7 +56,7 @@ class GmailSmtpSenderTest {
                                         UUID.randomUUID(),
                                         "user@example.edu",
                                         "Tiêu đề",
-                                        "Nội dung"),
+                                        "Nội dung", null),
                         EmailDeliveryException.class);
         assertThat(error.ambiguous()).isTrue();
     }
@@ -73,7 +73,7 @@ class GmailSmtpSenderTest {
                                         UUID.randomUUID(),
                                         "user@example.edu",
                                         "Tiêu đề",
-                                        "Nội dung"),
+                                        "Nội dung", null),
                         EmailDeliveryException.class);
         assertThat(error.retryable()).isTrue();
         assertThat(error.ambiguous()).isFalse();

@@ -1,0 +1,11 @@
+Xin chào [(${studentName})],
+
+[(${companyName})] trân trọng mời bạn tham gia phỏng vấn vị trí [(${jobTitle})].
+
+Thời gian: [(${scheduledAt})]
+Hình thức: [(${format})]
+[# th:if="${!#strings.isEmpty(destination)}"]Địa điểm/Phòng họp: [(${destination})]
+[/][# th:if="${!#strings.isEmpty(interviewer)}"]Người phỏng vấn: [(${interviewer})]
+[/][# th:if="${!#strings.isEmpty(notes)}"]Ghi chú: [(${notes})]
+[/]
+Vui lòng kiểm tra thông tin trong InternLink: [(${actionUrl})]

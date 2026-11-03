@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{email/layout :: email(~{::title}, ~{::content})}">
+<head>
+    <title th:text="|[InternLink] ${subject}|">[InternLink] Thông báo từ Khoa</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div style="white-space:pre-line;" th:text="${body}">Nội dung thông báo do Khoa soạn.</div>
+    <div th:replace="~{email/components :: button(${baseUrl}, 'Mở InternLink')}"></div>
+</div>
+</body>
+</html>

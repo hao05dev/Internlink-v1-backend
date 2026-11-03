@@ -27,12 +27,12 @@ public class EmailDeliveryAdminController {
             @RequestParam(defaultValue = "") String status,
             @RequestParam(defaultValue = "") String scopeType,
             @RequestParam(defaultValue = "") String sourceType,
-            @RequestParam(required = false) UUID templateVersionId,
+            @RequestParam(defaultValue = "") String templateKey,
             @RequestParam(defaultValue = "") String recipient,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.success(
-                service.page(status, scopeType, sourceType, templateVersionId, recipient, page, size));
+                service.page(status, scopeType, sourceType, templateKey, recipient, page, size));
     }
 
     @PutMapping("/controls")

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -22,6 +23,7 @@ public class NotificationCampaignDeliveryService {
     private final JpaUserRepository users;
     private final NotificationService notifications;
     private final EmailOutboxService emails;
+    private final EmailRenderer renderer;
     private final PlatformTransactionManager transactions;
 
     public void process(NotificationCampaignRepository.Work row) {
@@ -76,14 +78,19 @@ public class NotificationCampaignDeliveryService {
                             emails.attachContext(
                                     notificationId,
                                     new EmailDispatchContext(
-                                            campaign.templateVersionId(), campaign.creator(), "NOTIFICATION_CAMPAIGN",
+                                            campaign.creator(), "NOTIFICATION_CAMPAIGN",
                                             campaign.id(), "DEPARTMENT", term.getDepartment().getId()));
                         } else if (!"IN_APP".equals(campaign.channel())) {
                             String key = "campaign:" + campaign.id() + ":" + row.id();
+                            var content = renderer.render(
+                                    EmailTemplate.CAMPAIGN,
+                                    Map.of(
+                                            "subject", subject.replaceFirst("^\\[InternLink\\]\\s*", ""),
+                                            "body", body));
                             email = emails.enqueueNotice(
-                                    row.email(), subject, body, type, key,
+                                    row.email(), content, type, key,
                                     new EmailDispatchContext(
-                                            campaign.templateVersionId(), campaign.creator(), "NOTIFICATION_CAMPAIGN",
+                                            campaign.creator(), "NOTIFICATION_CAMPAIGN",
                                             campaign.id(), "DEPARTMENT", term.getDepartment().getId()));
                             repository.attach(row, key);
                         }

@@ -1,0 +1,16 @@
+Xin chào [(${studentName})] (MSSV: [(${studentCode})]),
+
+Khoa đã xác nhận và kích hoạt tài khoản của bạn trên Cổng thông tin Thực tập tốt nghiệp InternLink cho học kỳ [(${termName})].
+
+Tài khoản của bạn: [(${email})]
+
+Vui lòng mở liên kết một lần dưới đây để tự đặt mật khẩu. Liên kết có hiệu lực trong [(${ttlHours})] giờ:
+[(${activationUrl})]
+
+LƯU Ý QUAN TRỌNG:
+1. Không chuyển tiếp liên kết kích hoạt cho người khác.
+2. Liên kết chỉ sử dụng được một lần. Nếu hết hạn, dùng chức năng Quên mật khẩu.
+3. Sau khi kích hoạt, vui lòng kiểm tra thông tin Giảng viên hướng dẫn được phân công.
+
+Trân trọng,
+Ban Quản lý Thực tập Khoa / Trường CNTT-TT

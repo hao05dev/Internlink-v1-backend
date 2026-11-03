@@ -11,5 +11,4 @@ public record NotificationCampaignRequest(
         @NotBlank @Size(max = 40) String audience,
         @NotBlank @Size(max = 255) String subject,
         @NotBlank @Size(max = 20000) String body,
-        @NotBlank String channel,
-        UUID templateId) {}
+        @NotBlank String channel) {}

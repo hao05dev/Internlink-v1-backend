@@ -9,8 +9,7 @@ import java.util.UUID;
 public interface EmailOutboxStore {
     boolean insert(
             String email,
-            String subject,
-            String body,
+            RenderedEmail content,
             String key,
             UUID notificationId,
             UUID userId,

@@ -10,7 +10,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Data
 @Builder
@@ -38,8 +37,6 @@ public class ScheduleInterviewRequest {
 
     @Size(max = 2000, message = "Ghi chú không quá 2000 ký tự")
     private String notes;
-
-    private UUID emailTemplateId;
 
     @Builder.Default
     private Boolean sendEmail = true;

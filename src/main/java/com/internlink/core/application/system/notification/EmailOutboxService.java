@@ -29,8 +29,7 @@ public class EmailOutboxService {
             return "SKIPPED";
         return insert(
                         notification.getRecipient().getEmail(),
-                        branded(notification.getTitle()),
-                        composer.body(notification),
+                        composer.render(notification),
                         "notification:" + notification.getId(),
                         notification.getId(),
                         notification.getRecipient().getId(),
@@ -41,26 +40,23 @@ public class EmailOutboxService {
     }
 
     @Transactional
-    public boolean enqueueNotice(String email, String subject, String body) {
+    public boolean enqueueNotice(String email, RenderedEmail content) {
         return enqueueNotice(
                 email,
-                subject,
-                body,
+                content,
                 "ROSTER_NOTICE",
-                "notice:" + digest(email + "\n" + subject + "\n" + body));
+                "notice:" + digest(email + "\n" + content.subject() + "\n" + content.text()));
     }
 
     @Transactional
-    public boolean enqueueNotice(
-            String email, String subject, String body, String type, String key) {
-        return enqueueNotice(email, subject, body, type, key, EmailDispatchContext.none());
+    public boolean enqueueNotice(String email, RenderedEmail content, String type, String key) {
+        return enqueueNotice(email, content, type, key, EmailDispatchContext.none());
     }
 
     @Transactional
     public boolean enqueueNotice(
             String email,
-            String subject,
-            String body,
+            RenderedEmail content,
             String type,
             String key,
             EmailDispatchContext context) {
@@ -69,8 +65,7 @@ public class EmailOutboxService {
         if (registered.isPresent() && !recipients.allows(registered.get(), type)) return false;
         return insert(
                 email,
-                subject,
-                body,
+                content,
                 key,
                 null,
                 registered.map(user -> user.getId()).orElse(null),
@@ -80,13 +75,13 @@ public class EmailOutboxService {
 
     private boolean insert(
             String email,
-            String subject,
-            String body,
+            RenderedEmail content,
             String key,
             UUID notificationId,
             UUID userId,
             String type,
             EmailDispatchContext context) {
+        String subject = content == null ? null : content.subject();
         if (email == null
                 || email.length() > 254
                 || !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
@@ -95,12 +90,13 @@ public class EmailOutboxService {
                 || subject.length() > 255
                 || subject.contains("\r")
                 || subject.contains("\n")
-                || body == null
-                || body.length() > 50000
+                || content.text() == null
+                || content.text().length() > 50000
+                || (content.html() != null && content.html().length() > 200000)
                 || key == null
                 || key.length() > 200)
             throw new IllegalArgumentException("Nội dung email không hợp lệ");
-        return store.insert(email, subject, body, key, notificationId, userId, type, context);
+        return store.insert(email, content, key, notificationId, userId, type, context);
     }
 
     public void attachContext(UUID notificationId, EmailDispatchContext context) {
@@ -109,10 +105,6 @@ public class EmailOutboxService {
 
     private boolean canQueue() {
         return settings.isEnabled() && !"DISABLED".equals(settings.getDeliveryMode());
-    }
-
-    private String branded(String subject) {
-        return subject.startsWith("[InternLink]") ? subject : "[InternLink] " + subject;
     }
 
     private static String digest(String value) {

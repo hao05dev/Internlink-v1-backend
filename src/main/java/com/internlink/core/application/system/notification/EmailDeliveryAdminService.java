@@ -33,7 +33,7 @@ public class EmailDeliveryAdminService {
     }
 
     public EmailDeliveryResponse.Page page(
-            String status, String scopeType, String sourceType, UUID templateVersionId,
+            String status, String scopeType, String sourceType, String templateKey,
             String recipient, int page, int size) {
         guard.requireRole(UserRole.ADMIN);
         if (status != null
@@ -54,8 +54,10 @@ public class EmailDeliveryAdminService {
             throw new BadRequestException("Phạm vi email không hợp lệ");
         if (sourceType != null && sourceType.length() > 40)
             throw new BadRequestException("Nguồn gửi không hợp lệ");
+        if (templateKey != null && templateKey.length() > 60)
+            throw new BadRequestException("Mẫu email không hợp lệ");
         return store.page(
-                new EmailDeliveryFilter(status, scopeType, sourceType, templateVersionId, recipient),
+                new EmailDeliveryFilter(status, scopeType, sourceType, templateKey, recipient),
                 Math.max(0, page), Math.max(1, Math.min(100, size)));
     }
 

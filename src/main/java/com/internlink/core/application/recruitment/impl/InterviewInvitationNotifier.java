@@ -15,7 +15,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class InterviewInvitationNotifier {
     private final NotificationService notifications;
-    private final EmailTemplateService templates;
+    private final EmailRenderer renderer;
     private final EmailOutboxService outbox;
     private final EmailProperties settings;
 
@@ -38,23 +38,32 @@ public class InterviewInvitationNotifier {
         String companyName = application.getJob().getCompany().getCompanyName();
         String destination = request.getFormat() == InterviewFormat.ONLINE
                 ? request.getMeetingUrl() : request.getLocation();
-        var values = Map.of(
-                "student.fullName", Objects.toString(application.getStudent().getFullName(), ""),
-                "company.name", companyName,
-                "job.title", jobTitle,
-                "interview.scheduledAt", formattedTime,
-                "interview.format", request.getFormat().name(),
-                "interview.destination", Objects.toString(destination, ""),
-                "interview.interviewer", Objects.toString(request.getInterviewer(), ""),
-                "interview.notes", Objects.toString(request.getNotes(), ""),
-                "actionUrl", settings.getPublicBaseUrl() + "/student/applications");
-        var rendered = templates.resolve(request.getEmailTemplateId(), "INTERVIEW_INVITATION", values);
+        var content = renderer.render(
+                EmailTemplate.INTERVIEW_INVITATION,
+                Map.of(
+                        "studentName", Objects.toString(application.getStudent().getFullName(), ""),
+                        "companyName", companyName,
+                        "jobTitle", jobTitle,
+                        "scheduledAt", formattedTime,
+                        "format", formatLabel(request.getFormat()),
+                        "destination", Objects.toString(destination, ""),
+                        "interviewer", Objects.toString(request.getInterviewer(), ""),
+                        "notes", Objects.toString(request.getNotes(), ""),
+                        "actionUrl", renderer.baseUrl() + "/student/applications"));
         outbox.enqueueNotice(
-                application.getStudent().getEmail(), rendered.subject(), rendered.body(),
+                application.getStudent().getEmail(), content,
                 "INTERVIEW_SCHEDULED",
                 "interview:" + application.getId() + ":" + roundNumber + ":" + request.getScheduledAt(),
                 new EmailDispatchContext(
-                        rendered.versionId(), actor.getId(), "JOB_APPLICATION", application.getId(),
+                        actor.getId(), "JOB_APPLICATION", application.getId(),
                         "COMPANY", application.getJob().getCompany().getId()));
+    }
+
+    private static String formatLabel(InterviewFormat format) {
+        return switch (format) {
+            case ONLINE -> "Trực tuyến";
+            case OFFLINE -> "Trực tiếp";
+            case HYBRID -> "Kết hợp trực tuyến và trực tiếp";
+        };
     }
 }

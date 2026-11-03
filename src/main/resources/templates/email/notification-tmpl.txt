@@ -1,0 +1,5 @@
+[(${message})]
+
+Xem trong InternLink: [(${actionUrl})]
+
+Bạn có thể điều chỉnh email trong mục Thông báo: [(${preferencesUrl})]

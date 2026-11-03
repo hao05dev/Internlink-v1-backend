@@ -21,7 +21,7 @@ public class GmailApiSender {
     private final EmailProperties settings;
     private final EmailMessageFactory messages;
 
-    public String deliver(UUID id, String email, String subject, String body) {
+    public String deliver(UUID id, String email, String subject, String body, String html) {
         var message =
                 messages.create(
                         Session.getInstance(new Properties()),
@@ -29,7 +29,8 @@ public class GmailApiSender {
                         settings.getFrom(),
                         email,
                         subject,
-                        body);
+                        body,
+                        html);
         try {
             var bytes = new ByteArrayOutputStream();
             message.writeTo(bytes);

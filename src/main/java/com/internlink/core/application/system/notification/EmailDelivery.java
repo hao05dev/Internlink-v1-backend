@@ -10,6 +10,7 @@ public record EmailDelivery(
         String email,
         String subject,
         String body,
+        String htmlBody,
         String type,
         int attempts,
         UUID lease) {}

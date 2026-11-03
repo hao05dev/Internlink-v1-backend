@@ -29,8 +29,7 @@ public class JdbcEmailOutboxStore implements EmailOutboxStore {
 
     public boolean insert(
             String email,
-            String subject,
-            String body,
+            RenderedEmail content,
             String key,
             UUID notificationId,
             UUID userId,
@@ -38,19 +37,20 @@ public class JdbcEmailOutboxStore implements EmailOutboxStore {
             EmailDispatchContext context) {
         return jdbc.update(
                         """
-INSERT INTO email_outbox(id,notification_id,recipient_user_id,recipient_email,subject,body,event_type,idempotency_key,status,
-    template_version_id,initiated_by,source_type,source_id,scope_type,scope_id)
-VALUES(?,?,?,?,?,?,?,?,'PENDING',?,?,?,?,?,?) ON CONFLICT(idempotency_key) DO NOTHING
+INSERT INTO email_outbox(id,notification_id,recipient_user_id,recipient_email,subject,body,html_body,event_type,idempotency_key,status,
+    template_key,initiated_by,source_type,source_id,scope_type,scope_id)
+VALUES(?,?,?,?,?,?,?,?,?,'PENDING',?,?,?,?,?,?) ON CONFLICT(idempotency_key) DO NOTHING
 """,
                         UUID.randomUUID(),
                         notificationId,
                         userId,
                         email,
-                        subject,
-                        body,
+                        content.subject(),
+                        content.text(),
+                        content.html(),
                         type,
                         key,
-                        context.templateVersionId(),
+                        content.template(),
                         context.initiatedBy(),
                         context.sourceType(),
                         context.sourceId(),
@@ -195,9 +195,9 @@ FROM email_outbox
             clauses.add("source_type=?");
             args.add(filter.sourceType());
         }
-        if (filter.templateVersionId() != null) {
-            clauses.add("template_version_id=?");
-            args.add(filter.templateVersionId());
+        if (filter.templateKey() != null && !filter.templateKey().isBlank()) {
+            clauses.add("template_key=?");
+            args.add(filter.templateKey());
         }
         if (filter.recipient() != null && !filter.recipient().isBlank()) {
             clauses.add("lower(recipient_email) LIKE ?");
@@ -226,7 +226,7 @@ FROM email_outbox
                                         rs.getInt("attempts"),
                                         rs.getString("last_error_code"),
                                         rs.getString("provider_message_id"),
-                                        uuid(rs, "template_version_id"),
+                                        rs.getString("template_key"),
                                         uuid(rs, "initiated_by"),
                                         rs.getString("source_type"),
                                         uuid(rs, "source_id"),
@@ -257,9 +257,9 @@ FROM email_outbox
 
     public void attachContext(UUID notificationId, EmailDispatchContext context) {
         jdbc.update("""
-UPDATE email_outbox SET template_version_id=?,initiated_by=?,source_type=?,source_id=?,scope_type=?,scope_id=?
+UPDATE email_outbox SET initiated_by=?,source_type=?,source_id=?,scope_type=?,scope_id=?
 WHERE notification_id=?
-""", context.templateVersionId(), context.initiatedBy(), context.sourceType(), context.sourceId(),
+""", context.initiatedBy(), context.sourceType(), context.sourceId(),
                 context.scopeType(), context.scopeId(), notificationId);
     }
 
@@ -330,6 +330,7 @@ UPDATE email_outbox SET status=?,attempts=CASE WHEN ?='RETRY' THEN 0 ELSE attemp
                 rs.getString("recipient_email"),
                 rs.getString("subject"),
                 rs.getString("body"),
+                rs.getString("html_body"),
                 rs.getString("event_type"),
                 rs.getInt("attempts"),
                 uuid(rs, "lease_token"));

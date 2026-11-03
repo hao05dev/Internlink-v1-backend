@@ -2,6 +2,10 @@ package com.internlink.core.application.auth;
 
 import com.internlink.core.application.auth.impl.PasswordResetServiceImpl;
 import com.internlink.core.application.system.notification.EmailOutboxService;
+import com.internlink.core.application.system.notification.EmailRenderer;
+import com.internlink.core.application.system.notification.RenderedEmail;
+import com.internlink.core.infrastructure.integration.email.EmailProperties;
+import org.mockito.ArgumentCaptor;
 import com.internlink.core.domain.auth.PasswordResetToken;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.infrastructure.persistence.jpa.JpaAuthSessionFamilyRepository;
@@ -62,6 +66,7 @@ class PasswordResetServiceTest {
                 cryptoUtils,
                 passwordEncoder,
                 emailOutboxService,
+                new EmailRenderer(new EmailProperties()),
                 recoveryLimits
         );
         ReflectionTestUtils.setField(service, "publicBaseUrl", "http://localhost:3000");
@@ -84,13 +89,17 @@ class PasswordResetServiceTest {
         service.forgotPassword(ForgotPasswordRequest.builder().email("student@internlink.vn").build());
 
         verify(tokenRepository).save(any(PasswordResetToken.class));
+        ArgumentCaptor<RenderedEmail> content = ArgumentCaptor.forClass(RenderedEmail.class);
         verify(emailOutboxService).enqueueNotice(
                 eq("student@internlink.vn"),
-                eq("InternLink - Yêu cầu đặt lại mật khẩu"),
-                contains("http://localhost:3000/reset-password?token=raw-token-123"),
+                content.capture(),
                 eq("PASSWORD_RESET"),
                 eq("pwd-reset:hashed-token-123")
         );
+        assertThat(content.getValue().subject()).isEqualTo("[InternLink] Yêu cầu đặt lại mật khẩu");
+        assertThat(content.getValue().text())
+                .contains("http://localhost:3000/reset-password?token=raw-token-123");
+        assertThat(content.getValue().html()).contains("Nguyen Van A");
     }
 
     @Test
@@ -100,7 +109,7 @@ class PasswordResetServiceTest {
         service.forgotPassword(ForgotPasswordRequest.builder().email("unknown@internlink.vn").build());
 
         verify(tokenRepository, never()).save(any());
-        verify(emailOutboxService, never()).enqueueNotice(any(), any(), any(), any(), any());
+        verify(emailOutboxService, never()).enqueueNotice(any(), any(RenderedEmail.class), any(), any());
     }
 
     @Test

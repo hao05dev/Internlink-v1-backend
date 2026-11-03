@@ -2,6 +2,8 @@ package com.internlink.core.application.auth.impl;
 
 import com.internlink.core.application.auth.PasswordResetService;
 import com.internlink.core.application.system.notification.EmailOutboxService;
+import com.internlink.core.application.system.notification.EmailRenderer;
+import com.internlink.core.application.system.notification.EmailTemplate;
 import com.internlink.core.domain.auth.PasswordResetToken;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.infrastructure.persistence.jpa.JpaAuthSessionFamilyRepository;
@@ -34,6 +36,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final TokenCryptoUtils cryptoUtils;
     private final PasswordEncoder passwordEncoder;
     private final EmailOutboxService emailOutboxService;
+    private final EmailRenderer emailRenderer;
     private final com.internlink.core.application.auth.RecoveryRequestLimiter recoveryLimits;
 
     @Value("${internlink.email.public-base-url:http://localhost:3000}")
@@ -73,17 +76,16 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         tokenRepository.save(resetToken);
 
         String resetUrl = publicBaseUrl + "/reset-password?token=" + rawToken;
-        String emailBody = String.format(
-                "Xin chào %s,\n\nBạn vừa gửi yêu cầu đặt lại mật khẩu tại hệ thống InternLink.\n" +
-                "Vui lòng nhấn vào liên kết bên dưới để tạo mật khẩu mới (Liên kết có hiệu lực trong %d phút):\n%s\n\n" +
-                "Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.",
-                user.getFullName(), RESET_TOKEN_TTL_MINUTES, resetUrl
-        );
+        var content = emailRenderer.render(
+                EmailTemplate.FORGOT_PASSWORD,
+                java.util.Map.of(
+                        "fullName", java.util.Objects.toString(user.getFullName(), ""),
+                        "resetUrl", resetUrl,
+                        "ttlMinutes", RESET_TOKEN_TTL_MINUTES));
 
         emailOutboxService.enqueueNotice(
                 user.getEmail(),
-                "InternLink - Yêu cầu đặt lại mật khẩu",
-                emailBody,
+                content,
                 "PASSWORD_RESET",
                 "pwd-reset:" + tokenHash
         );

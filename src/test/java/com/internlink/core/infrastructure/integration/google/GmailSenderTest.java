@@ -45,7 +45,7 @@ class GmailSenderTest {
                                 id,
                                 "student@example.edu",
                                 "Kết quả thực tập",
-                                "Hồ sơ đã được duyệt"))
+                                "Hồ sơ đã được duyệt", null))
                 .isEqualTo("gmail-123");
         var payload = ArgumentCaptor.forClass(byte[].class);
         verify(google)
@@ -75,7 +75,7 @@ class GmailSenderTest {
                                         UUID.randomUUID(),
                                         "student@example.edu\r\nBcc: attacker@example.com",
                                         "Subject",
-                                        "Body"))
+                                        "Body", null))
                 .isInstanceOf(EmailDeliveryException.class);
         assertThatThrownBy(
                         () ->
@@ -83,7 +83,7 @@ class GmailSenderTest {
                                         UUID.randomUUID(),
                                         "student@example.edu",
                                         "Subject\r\nBcc: attacker@example.com",
-                                        "Body"))
+                                        "Body", null))
                 .isInstanceOf(EmailDeliveryException.class);
         verifyNoInteractions(google);
     }
@@ -99,7 +99,7 @@ class GmailSenderTest {
                                         UUID.randomUUID(),
                                         "student@example.edu",
                                         "Subject",
-                                        "Body"),
+                                        "Body", null),
                         EmailDeliveryException.class);
         assertThat(error.retryable()).isTrue();
         assertThat(error.ambiguous()).isFalse();
@@ -116,7 +116,7 @@ class GmailSenderTest {
                                         UUID.randomUUID(),
                                         "student@example.edu",
                                         "Subject",
-                                        "Body"),
+                                        "Body", null),
                         EmailDeliveryException.class);
         assertThat(error.ambiguous()).isTrue();
         assertThat(error.retryable()).isFalse();
@@ -131,7 +131,7 @@ class GmailSenderTest {
                                         UUID.randomUUID(),
                                         "student@example.edu",
                                         "Subject",
-                                        "Body"))
+                                        "Body", null))
                 .isInstanceOf(EmailDeliveryException.class);
         verifyNoInteractions(google);
     }
@@ -147,7 +147,7 @@ class GmailSenderTest {
                                         UUID.randomUUID(),
                                         "student@example.edu",
                                         "Subject",
-                                        "Body"),
+                                        "Body", null),
                         EmailDeliveryException.class);
         assertThat(error.ambiguous()).isFalse();
         assertThat(error.retryable()).isFalse();
@@ -180,7 +180,7 @@ class GmailSenderTest {
                                         UUID.randomUUID(),
                                         "student@example.edu",
                                         "Subject",
-                                        "Body"),
+                                        "Body", null),
                         EmailDeliveryException.class);
         assertThat(quota.retryable()).isTrue();
         assertThat(quota.retryAfterSeconds()).isEqualTo(180);
@@ -194,7 +194,7 @@ class GmailSenderTest {
                                         UUID.randomUUID(),
                                         "student@example.edu",
                                         "Subject",
-                                        "Body"),
+                                        "Body", null),
                         EmailDeliveryException.class);
         assertThat(permission.retryable()).isFalse();
         assertThat(permission.ambiguous()).isFalse();

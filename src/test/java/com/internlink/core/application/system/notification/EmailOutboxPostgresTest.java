@@ -38,13 +38,13 @@ class EmailOutboxPostgresTest {
     @Test
     void metricsMeasureBacklogAgeAndAcceptanceLatencyWithoutTreatingSkippedAsSent() {
         assertThat(store.metrics().averageAcceptanceSeconds24Hours()).isNull();
-        queue.enqueueNotice(user.getEmail(), "Pending", "Body");
+        queue.enqueueNotice(user.getEmail(), plain("Pending", "Body"));
         jdbc.update("UPDATE email_outbox SET created_at=CURRENT_TIMESTAMP-INTERVAL '10 minutes'");
-        queue.enqueueNotice(user.getEmail(), "Sent", "Body");
+        queue.enqueueNotice(user.getEmail(), plain("Sent", "Body"));
         jdbc.update(
                 "UPDATE email_outbox SET status='ACCEPTED',created_at=CURRENT_TIMESTAMP-INTERVAL '90"
                     + " seconds',sent_at=CURRENT_TIMESTAMP WHERE subject='Sent'");
-        queue.enqueueNotice(user.getEmail(), "Skipped", "Body");
+        queue.enqueueNotice(user.getEmail(), plain("Skipped", "Body"));
         jdbc.update(
                 "UPDATE email_outbox SET status='SKIPPED',created_at=CURRENT_TIMESTAMP-INTERVAL '1"
                     + " day' WHERE subject='Skipped'");
@@ -87,7 +87,10 @@ class EmailOutboxPostgresTest {
                         + "'BOUNCED','FAILED','UNKNOWN','SKIPPED'))");
         jdbc.execute(
                 "ALTER TABLE email_outbox ADD COLUMN delivered_at TIMESTAMPTZ,"
-                        + " ADD COLUMN bounced_at TIMESTAMPTZ");
+                        + " ADD COLUMN bounced_at TIMESTAMPTZ, ADD COLUMN html_body TEXT,"
+                        + " ADD COLUMN template_key VARCHAR(60), ADD COLUMN initiated_by UUID,"
+                        + " ADD COLUMN source_type VARCHAR(40), ADD COLUMN source_id UUID,"
+                        + " ADD COLUMN scope_type VARCHAR(20), ADD COLUMN scope_id UUID");
         users = mock(JpaUserRepository.class);
         preferences = mock(JpaNotificationPreferenceRepository.class);
         sender = mock(GmailSender.class);
@@ -112,8 +115,12 @@ class EmailOutboxPostgresTest {
         var policy = new EmailRecipientPolicy(users, preferences);
         queue =
                 new EmailOutboxService(
-                        store, settings, policy, users, new NotificationEmailComposer(settings));
+                        store, settings, policy, users, new NotificationEmailComposer(new EmailRenderer(settings)));
         worker = new EmailOutboxWorker(store, sender, settings, policy);
+    }
+
+    private static RenderedEmail plain(String subject, String body) {
+        return new RenderedEmail("TEST", subject, body, null);
     }
 
     @AfterEach
@@ -186,7 +193,7 @@ class EmailOutboxPostgresTest {
         var n = notification();
         queue.enqueue(n);
         var row = worker.claim();
-        when(sender.deliver(any(), anyString(), anyString(), anyString())).thenReturn("gmail-id");
+        when(sender.deliver(any(), anyString(), anyString(), anyString(), any())).thenReturn("gmail-id");
         worker.deliver(row);
         assertThat(state(row.id())).isEqualTo("ACCEPTED");
         assertThat(
@@ -207,7 +214,7 @@ class EmailOutboxPostgresTest {
     void explicitTemporaryRejectionRetriesAfterDelay() {
         queue.enqueue(notification());
         var row = worker.claim();
-        when(sender.deliver(any(), anyString(), anyString(), anyString()))
+        when(sender.deliver(any(), anyString(), anyString(), anyString(), any()))
                 .thenThrow(new EmailDeliveryException("gmail_http_429", true, false));
         worker.deliver(row);
         assertThat(state(row.id())).isEqualTo("RETRY");
@@ -225,12 +232,12 @@ class EmailOutboxPostgresTest {
     void uncertainAcceptanceIsNeverAutomaticallyResent() {
         queue.enqueue(notification());
         var row = worker.claim();
-        when(sender.deliver(any(), anyString(), anyString(), anyString()))
+        when(sender.deliver(any(), anyString(), anyString(), anyString(), any()))
                 .thenThrow(new EmailDeliveryException("smtp_result_unknown", false, true));
         worker.deliver(row);
         worker.tick();
         assertThat(state(row.id())).isEqualTo("UNKNOWN");
-        verify(sender, times(1)).deliver(any(), anyString(), anyString(), anyString());
+        verify(sender, times(1)).deliver(any(), anyString(), anyString(), anyString(), any());
     }
 
     @Test
@@ -271,7 +278,7 @@ class EmailOutboxPostgresTest {
     @Test
     void inactiveRegisteredUserCannotReceiveRosterNotice() {
         user.setIsActive(false);
-        assertThat(queue.enqueueNotice(user.getEmail(), "Thông báo", "Nội dung")).isFalse();
+        assertThat(queue.enqueueNotice(user.getEmail(), plain("Thông báo", "Nội dung"))).isFalse();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM email_outbox", Integer.class))
                 .isZero();
     }
@@ -282,7 +289,7 @@ class EmailOutboxPostgresTest {
         var row = worker.claim();
         jdbc.update(
                 "UPDATE email_outbox SET lease_token=? WHERE id=?", UUID.randomUUID(), row.id());
-        when(sender.deliver(any(), anyString(), anyString(), anyString())).thenReturn("gmail-id");
+        when(sender.deliver(any(), anyString(), anyString(), anyString(), any())).thenReturn("gmail-id");
         worker.deliver(row);
         assertThat(state(row.id())).isEqualTo("SENDING");
     }

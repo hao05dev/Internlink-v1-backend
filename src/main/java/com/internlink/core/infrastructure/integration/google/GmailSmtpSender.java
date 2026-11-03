@@ -39,12 +39,13 @@ public class GmailSmtpSender {
         this.client = client;
     }
 
-    public String deliver(UUID id, String email, String subject, String body) {
+    public String deliver(UUID id, String email, String subject, String body, String html) {
         if (!settings.getFrom().equalsIgnoreCase(settings.getSmtpUsername())
                 || settings.getSmtpAppPassword().isBlank())
             throw new EmailDeliveryException("smtp_configuration_missing", false, false);
         var message =
-                messages.create(client.getSession(), id, settings.getFrom(), email, subject, body);
+                messages.create(
+                        client.getSession(), id, settings.getFrom(), email, subject, body, html);
         try {
             client.send(message);
             return message.getMessageID();

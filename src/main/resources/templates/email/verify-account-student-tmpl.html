@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{email/layout :: email(~{::title}, ~{::content})}">
+<head>
+    <title th:text="|[InternLink] Kích hoạt tài khoản Cổng thực tập tốt nghiệp - ${termName}|">[InternLink] Kích hoạt tài khoản Cổng thực tập tốt nghiệp - HK1 2026-2027</title>
+</head>
+<body>
+<div th:fragment="content">
+    <p>Xin chào <strong th:text="${studentName}">Nguyễn Văn A</strong>
+        (MSSV: <span th:text="${studentCode}">B2100001</span>),</p>
+    <p>Khoa đã xác nhận và kích hoạt tài khoản của bạn trên Cổng thông tin Thực tập tốt nghiệp InternLink
+        cho học kỳ <strong th:text="${termName}">HK1 2026-2027</strong>.</p>
+    <p>Tài khoản của bạn: <strong th:text="${email}">sv@student.ctu.edu.vn</strong></p>
+    <p>Nhấn nút bên dưới để tự đặt mật khẩu. Liên kết chỉ dùng được một lần và có hiệu lực trong
+        <strong th:text="|${ttlHours} giờ|">72 giờ</strong>.</p>
+    <div th:replace="~{email/components :: button(${activationUrl}, 'Kích hoạt tài khoản')}"></div>
+    <div th:replace="~{email/components :: fallback(${activationUrl})}"></div>
+    <p style="margin-bottom:4px;"><strong>Lưu ý quan trọng:</strong></p>
+    <ol style="margin-top:0;padding-left:20px;">
+        <li>Không chuyển tiếp liên kết kích hoạt cho người khác.</li>
+        <li>Liên kết chỉ sử dụng được một lần. Nếu hết hạn, dùng chức năng Quên mật khẩu.</li>
+        <li>Sau khi kích hoạt, vui lòng kiểm tra thông tin Giảng viên hướng dẫn được phân công.</li>
+    </ol>
+    <p>Trân trọng,<br>Ban Quản lý Thực tập Khoa / Trường CNTT-TT</p>
+</div>
+</body>
+</html>

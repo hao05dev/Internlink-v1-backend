@@ -25,8 +25,7 @@ public class NotificationCampaignRepository {
             String body,
             String channel,
             String purpose,
-            String status,
-            UUID templateVersionId) {}
+            String status) {}
 
     public record Work(
             UUID id,
@@ -63,13 +62,12 @@ public class NotificationCampaignRepository {
 
     public UUID create(
             UUID creator, String hash, NotificationCampaignRequest request,
-            List<NotificationCampaignAudienceRepository.Target> targets,
-            UUID templateVersionId) {
+            List<NotificationCampaignAudienceRepository.Target> targets) {
         UUID id = UUID.randomUUID();
         jdbc.update(
                 """
-INSERT INTO notification_campaigns(id,term_id,created_by,request_key,request_hash,purpose,audience,subject,body,channel,template_version_id)
-VALUES(?,?,?,?,?,?,?,?,?,?,?)
+INSERT INTO notification_campaigns(id,term_id,created_by,request_key,request_hash,purpose,audience,subject,body,channel)
+VALUES(?,?,?,?,?,?,?,?,?,?)
 """,
                 id,
                 request.termId(),
@@ -80,8 +78,7 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?)
                 request.audience(),
                 request.subject(),
                 request.body(),
-                request.channel(),
-                templateVersionId);
+                request.channel());
         for (var target : targets)
             jdbc.update(
                     """
@@ -111,8 +108,7 @@ ON CONFLICT(campaign_id,email) DO NOTHING
                                         rs.getString("body"),
                                         rs.getString("channel"),
                                         rs.getString("purpose"),
-                                        rs.getString("status"),
-                                        uuid(rs, "template_version_id")),
+                                        rs.getString("status")),
                         id);
         if (rows.isEmpty())
             throw new com.internlink.core.shared.exception.ResourceNotFoundException(

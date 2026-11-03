@@ -18,7 +18,7 @@ public final class EmailDeliveryResponse {
             int attempts,
             String errorCode,
             String providerMessageId,
-            UUID templateVersionId,
+            String templateKey,
             UUID initiatedBy,
             String sourceType,
             UUID sourceId,

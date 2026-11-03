@@ -17,11 +17,11 @@ public class GmailSender implements EmailDeliveryGateway {
     private final GmailApiSender api;
 
     @Override
-    public String deliver(UUID id, String email, String subject, String body) {
+    public String deliver(UUID id, String email, String subject, String body, String html) {
         if (!settings.isEnabled()) throw new EmailDeliveryException("email_disabled", false, false);
         return switch (settings.getProvider()) {
-            case "GMAIL_SMTP" -> smtp.deliver(id, email, subject, body);
-            case "GOOGLE_WORKSPACE" -> api.deliver(id, email, subject, body);
+            case "GMAIL_SMTP" -> smtp.deliver(id, email, subject, body, html);
+            case "GOOGLE_WORKSPACE" -> api.deliver(id, email, subject, body, html);
             default ->
                     throw new EmailDeliveryException("email_provider_not_configured", false, false);
         };

@@ -54,7 +54,8 @@ public class EmailOutboxWorker {
                             row.id(),
                             settings.routeRecipient(row.email()),
                             settings.routeSubject(row.email(), row.subject()),
-                            row.body()),
+                            row.body(),
+                            row.htmlBody()),
                     0);
         } catch (EmailDeliveryException ex) {
             String result =

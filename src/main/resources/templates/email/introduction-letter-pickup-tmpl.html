@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{email/layout :: email(~{::title}, ~{::content})}">
+<head>
+    <title th:text="|[InternLink] Thông báo nhận giấy giới thiệu thực tập - ${termName}|">[InternLink] Thông báo nhận giấy giới thiệu thực tập - HK1 2026-2027</title>
+</head>
+<body>
+<div th:fragment="content">
+    <p>Xin chào <strong th:text="${studentName}">Nguyễn Văn A</strong>
+        (MSSV: <span th:text="${studentCode}">B2100001</span>),</p>
+    <p>Giấy giới thiệu thực tập kỳ <strong th:text="${termName}">HK1 2026-2027</strong> của bạn đã sẵn sàng.
+        Vui lòng đến nhận bản cứng theo thông tin sau:</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+           style="width:100%;margin:16px 0;border:1px solid #e5e7eb;border-radius:6px;">
+        <tr>
+            <td style="padding:10px 14px;width:140px;color:#6b7280;">Địa điểm</td>
+            <td style="padding:10px 14px;font-weight:bold;" th:text="${pickupLocation}">Văn phòng Khoa</td>
+        </tr>
+        <tr>
+            <td style="padding:10px 14px;color:#6b7280;border-top:1px solid #e5e7eb;">Từ ngày</td>
+            <td style="padding:10px 14px;font-weight:bold;border-top:1px solid #e5e7eb;" th:text="${pickupDate}">01/12/2026</td>
+        </tr>
+    </table>
+    <p>Khi đến nhận, vui lòng mang theo thẻ sinh viên.</p>
+    <p>Trân trọng,<br>Ban Quản lý Thực tập Khoa</p>
+</div>
+</body>
+</html>

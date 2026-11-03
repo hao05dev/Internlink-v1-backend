@@ -1,12 +1,17 @@
 package com.internlink.core.application.organization.impl;
 
 import com.internlink.core.application.system.notification.EmailOutboxService;
+import com.internlink.core.application.system.notification.EmailRenderer;
+import com.internlink.core.application.system.notification.EmailTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+import java.util.Objects;
+
 /**
- * Soạn và đưa thư kích hoạt tài khoản sinh viên vào email outbox.
+ * Soạn (template verify-account-student-tmpl) và đưa thư kích hoạt tài khoản sinh viên vào email outbox.
  */
 @Slf4j
 @Component
@@ -14,6 +19,7 @@ import org.springframework.stereotype.Component;
 public class StudentProvisionEmailNotifier {
 
     private final EmailOutboxService emailOutboxService;
+    private final EmailRenderer renderer;
 
     public void sendProvisionEmail(
             String studentEmail,
@@ -22,30 +28,17 @@ public class StudentProvisionEmailNotifier {
             String activationUrl,
             long ttlHours,
             String termName) {
-        String subject = "[InternLink] Kích hoạt tài khoản Cổng thực tập tốt nghiệp - " + termName;
-        String body = String.format(
-                """
-                Xin chào %s (MSSV: %s),
+        var content = renderer.render(
+                EmailTemplate.VERIFY_ACCOUNT_STUDENT,
+                Map.of(
+                        "studentName", Objects.toString(studentName, ""),
+                        "studentCode", Objects.toString(studentCode, ""),
+                        "email", studentEmail,
+                        "activationUrl", activationUrl,
+                        "ttlHours", ttlHours,
+                        "termName", Objects.toString(termName, "")));
 
-                Khoa đã xác nhận và kích hoạt tài khoản của bạn trên Cổng thông tin Thực tập tốt nghiệp InternLink cho học kỳ %s.
-
-                Tài khoản của bạn: %s
-
-                Vui lòng mở liên kết một lần dưới đây để tự đặt mật khẩu. Liên kết có hiệu lực trong %d giờ:
-                %s
-
-                LƯU Ý QUAN TRỌNG:
-                1. Không chuyển tiếp liên kết kích hoạt cho người khác.
-                2. Liên kết chỉ sử dụng được một lần. Nếu hết hạn, dùng chức năng Quên mật khẩu.
-                3. Sau khi kích hoạt, vui lòng kiểm tra thông tin Giảng viên hướng dẫn được phân công.
-
-                Trân trọng,
-                Ban Quản lý Thực tập Khoa / Trường CNTT-TT
-                """,
-                studentName, studentCode, termName, studentEmail, ttlHours, activationUrl
-        );
-
-        boolean enqueued = emailOutboxService.enqueueNotice(studentEmail, subject, body);
+        boolean enqueued = emailOutboxService.enqueueNotice(studentEmail, content);
         if (enqueued) {
             log.info("Đã đưa email kích hoạt cho sinh viên {} ({}) vào hàng đợi email.", studentCode, studentEmail);
         } else {

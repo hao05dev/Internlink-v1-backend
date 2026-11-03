@@ -1,26 +1,32 @@
 package com.internlink.core.application.system.notification;
 
 import com.internlink.core.domain.system.Notification;
-import com.internlink.core.infrastructure.integration.email.EmailProperties;
 
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 @RequiredArgsConstructor
 public class NotificationEmailComposer {
-    public static final String VERSION = "notification-v1";
-    private final EmailProperties settings;
+    public static final String VERSION = "notification-html-v1";
+    private final EmailRenderer renderer;
 
-    public String body(Notification notification) {
-        String path =
-                NotificationLinks.normalize(
-                        notification.getActionUrl(), notification.getRecipient().getRole());
-        return notification.getMessage()
-                + "\n\nXem trong InternLink: "
-                + settings.getPublicBaseUrl().replaceAll("/+$", "")
-                + path
-                + "\n\nBạn có thể điều chỉnh email trong mục Thông báo.";
+    public RenderedEmail render(Notification notification) {
+        var role = notification.getRecipient().getRole();
+        String path = NotificationLinks.normalize(notification.getActionUrl(), role);
+        String home = NotificationLinks.home(role);
+        String preferences = home.substring(0, home.indexOf('/', 1)) + "/notifications";
+        String title = notification.getTitle();
+        if (title.startsWith("[InternLink]")) title = title.substring("[InternLink]".length()).strip();
+        return renderer.render(
+                EmailTemplate.NOTIFICATION,
+                Map.of(
+                        "title", title,
+                        "message", notification.getMessage() == null ? "" : notification.getMessage(),
+                        "actionUrl", renderer.baseUrl() + path,
+                        "preferencesUrl", renderer.baseUrl() + preferences));
     }
 }

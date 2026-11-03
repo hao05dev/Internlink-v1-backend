@@ -3,6 +3,8 @@ package com.internlink.core.application.organization;
 import com.internlink.core.application.system.AuditLogService;
 import com.internlink.core.application.system.NotificationService;
 import com.internlink.core.application.system.notification.EmailOutboxService;
+import com.internlink.core.application.system.notification.EmailRenderer;
+import com.internlink.core.application.system.notification.EmailTemplate;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipTermRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
@@ -32,6 +34,7 @@ public class IntroductionLetterNoticeService {
     private final JpaUserRepository users;
     private final SecurityGuard securityGuard;
     private final EmailOutboxService gmail;
+    private final EmailRenderer renderer;
     private final NotificationService notifications;
     private final AuditLogService audit;
     private final PlatformTransactionManager transactionManager;
@@ -48,16 +51,6 @@ public class IntroductionLetterNoticeService {
     private record NoticeBatch(String termName, List<Recipient> recipients) {}
 
     public NoticeResult send(UUID termId, String pickupLocation, LocalDate pickupDate, List<UUID> rosterIds) {
-        return send(termId, pickupLocation, pickupDate, rosterIds, null, null);
-    }
-
-    public NoticeResult send(
-            UUID termId,
-            String pickupLocation,
-            LocalDate pickupDate,
-            List<UUID> rosterIds,
-            String emailSubjectTemplate,
-            String emailBodyTemplate) {
         if (pickupLocation == null
                 || pickupLocation.isBlank()
                 || pickupLocation.length() > 300
@@ -113,32 +106,25 @@ public class IntroductionLetterNoticeService {
         if (batch == null) throw new IllegalStateException("Không tải được danh sách sinh viên");
         
         String dateStr = pickupDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        String rawSubject = (emailSubjectTemplate != null && !emailSubjectTemplate.isBlank())
-                ? emailSubjectTemplate
-                : "Thông báo nhận giấy giới thiệu thực tập - {{termName}}";
-        String rawBody = (emailBodyTemplate != null && !emailBodyTemplate.isBlank())
-                ? emailBodyTemplate
-                : "Bạn vui lòng đến {{pickupLocation}} từ ngày {{pickupDate}} để nhận bản cứng giấy giới thiệu thực tập cho kỳ {{termName}}.";
+        String location = pickupLocation.trim();
+        String subject = "Thông báo nhận giấy giới thiệu thực tập - " + batch.termName();
+        String body = "Bạn vui lòng đến " + location + " từ ngày " + dateStr
+                + " để nhận bản cứng giấy giới thiệu thực tập cho kỳ " + batch.termName() + ".";
 
         int emails = 0;
         int inApp = 0;
         java.util.ArrayList<String> failures = new java.util.ArrayList<>();
         for (Recipient recipient : batch.recipients()) {
-            String subject = rawSubject
-                    .replace("{{termName}}", batch.termName())
-                    .replace("{{studentName}}", recipient.fullName())
-                    .replace("{{studentCode}}", recipient.studentCode())
-                    .replace("{{pickupLocation}}", pickupLocation.trim())
-                    .replace("{{pickupDate}}", dateStr);
-            String body = rawBody
-                    .replace("{{termName}}", batch.termName())
-                    .replace("{{studentName}}", recipient.fullName())
-                    .replace("{{studentCode}}", recipient.studentCode())
-                    .replace("{{pickupLocation}}", pickupLocation.trim())
-                    .replace("{{pickupDate}}", dateStr);
-
             try {
-                if (gmail.enqueueNotice(recipient.email(), subject, body)) emails++;
+                var content = renderer.render(
+                        EmailTemplate.INTRODUCTION_LETTER_PICKUP,
+                        Map.of(
+                                "studentName", recipient.fullName(),
+                                "studentCode", recipient.studentCode(),
+                                "termName", batch.termName(),
+                                "pickupLocation", location,
+                                "pickupDate", dateStr));
+                if (gmail.enqueueNotice(recipient.email(), content)) emails++;
             } catch (RuntimeException error) {
                 failures.add(recipient.studentCode());
             }

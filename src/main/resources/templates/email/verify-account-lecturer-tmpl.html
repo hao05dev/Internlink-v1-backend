@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{email/layout :: email(~{::title}, ~{::content})}">
+<head>
+    <title th:text="|[InternLink] Phân công tài khoản Giảng viên hướng dẫn - ${termName}|">[InternLink] Phân công tài khoản Giảng viên hướng dẫn - HK1 2026-2027</title>
+</head>
+<body>
+<div th:fragment="content">
+    <p>Kính gửi Thầy/Cô <strong th:text="${fullName}">Trần Thị B</strong>,</p>
+    <p>Ban Quản lý Thực tập Khoa đã thêm Thầy/Cô vào danh sách Giảng viên hướng dẫn học phần thực tập tốt nghiệp
+        (<strong th:text="${termName}">HK1 2026-2027</strong>).</p>
+    <p>Tài khoản hệ thống InternLink: <strong th:text="${email}">gv@ctu.edu.vn</strong></p>
+    <p>Nhấn nút bên dưới để tự đặt mật khẩu. Liên kết chỉ dùng được một lần và có hiệu lực trong
+        <strong th:text="|${ttlHours} giờ|">72 giờ</strong>.</p>
+    <div th:replace="~{email/components :: button(${activationUrl}, 'Kích hoạt tài khoản')}"></div>
+    <div th:replace="~{email/components :: fallback(${activationUrl})}"></div>
+    <p style="margin-bottom:4px;"><strong>Lưu ý bảo mật:</strong></p>
+    <ul style="margin-top:0;padding-left:20px;">
+        <li>Không chuyển tiếp liên kết kích hoạt cho người khác.</li>
+        <li>Liên kết chỉ dùng được một lần. Nếu hết hạn, dùng chức năng Quên mật khẩu.</li>
+        <li>Sau khi đăng nhập, Thầy/Cô có thể theo dõi danh sách sinh viên được phân công hướng dẫn và quản lý nhật ký thực tập.</li>
+    </ul>
+    <p>Trân trọng,<br>Ban Quản lý Thực tập Khoa</p>
+</div>
+</body>
+</html>

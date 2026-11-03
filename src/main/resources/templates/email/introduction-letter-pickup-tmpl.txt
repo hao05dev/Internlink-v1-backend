@@ -1,0 +1,9 @@
+Xin chào [(${studentName})] (MSSV: [(${studentCode})]),
+
+Giấy giới thiệu thực tập kỳ [(${termName})] của bạn đã sẵn sàng.
+Bạn vui lòng đến [(${pickupLocation})] từ ngày [(${pickupDate})] để nhận bản cứng.
+
+Khi đến nhận, vui lòng mang theo thẻ sinh viên.
+
+Trân trọng,
+Ban Quản lý Thực tập Khoa

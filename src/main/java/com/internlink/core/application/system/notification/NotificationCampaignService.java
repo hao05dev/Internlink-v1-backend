@@ -31,7 +31,6 @@ public class NotificationCampaignService {
     private final SecurityGuard guard;
     private final AuditLogService audit;
     private final EmailRecipientPolicy recipients;
-    private final EmailTemplateService templates;
 
     @Transactional(readOnly = true)
     public Preview preview(NotificationCampaignRequest request) {
@@ -81,8 +80,7 @@ public class NotificationCampaignService {
         }
         var targets = audiences.audience(request.termId(), request.audience());
         if (targets.isEmpty()) throw new BadRequestException("Không có người nhận phù hợp");
-        UUID templateVersionId = templates.versionForCampaign(request.templateId());
-        UUID id = repository.create(actor.getId(), hash, request, targets, templateVersionId);
+        UUID id = repository.create(actor.getId(), hash, request, targets);
         audit.logAction(
                 actor.getId(),
                 "CREATE_NOTIFICATION_CAMPAIGN",
@@ -219,8 +217,8 @@ public class NotificationCampaignService {
                                                             + r.subject()
                                                             + "\n"
                                                             + r.body()
-                                                            + "\n"
-                                                            + Objects.toString(r.templateId(), ""))
+                                                            // Giữ "\n" cuối để hash cũ (trước khi bỏ templateId) không đổi.
+                                                            + "\n")
                                                     .getBytes(StandardCharsets.UTF_8)));
         } catch (java.security.NoSuchAlgorithmException ex) {
             throw new IllegalStateException(ex);

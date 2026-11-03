@@ -12,6 +12,18 @@ import java.util.*;
 public class EmailMessageFactory {
     public MimeMessage create(
             Session session, UUID id, String from, String to, String subject, String body) {
+        return create(session, id, from, to, subject, body, null);
+    }
+
+    /** Có {@code html} thì gửi multipart/alternative (text + HTML), không thì chỉ gửi text. */
+    public MimeMessage create(
+            Session session,
+            UUID id,
+            String from,
+            String to,
+            String subject,
+            String body,
+            String html) {
         try {
             if (subject == null
                     || subject.isBlank()
@@ -31,9 +43,21 @@ public class EmailMessageFactory {
             message.setFrom(sender);
             message.setReplyTo(new Address[] {sender});
             message.setRecipient(Message.RecipientType.TO, address(to));
-            message.setHeader("X-InternLink-Template", "plain-v1");
             message.setSubject(subject, "UTF-8");
-            message.setText(body, "UTF-8");
+            if (html == null || html.isBlank()) {
+                message.setHeader("X-InternLink-Template", "plain-v1");
+                message.setText(body, "UTF-8");
+            } else {
+                message.setHeader("X-InternLink-Template", "html-v1");
+                var text = new MimeBodyPart();
+                text.setText(body, "UTF-8");
+                var rich = new MimeBodyPart();
+                rich.setContent(html, "text/html; charset=UTF-8");
+                var alternative = new MimeMultipart("alternative");
+                alternative.addBodyPart(text);
+                alternative.addBodyPart(rich);
+                message.setContent(alternative);
+            }
             message.setSentDate(new Date());
             message.saveChanges();
             return message;
