@@ -1,6 +1,8 @@
 package com.internlink.core.presentation.student.controller;
 
+import com.internlink.core.application.student.JobSearchContextService;
 import com.internlink.core.application.student.StudentProfileService;
+import com.internlink.core.presentation.student.dto.response.JobSearchContextResponse;
 import com.internlink.core.infrastructure.security.CustomUserDetail;
 import com.internlink.core.presentation.student.dto.request.StudentProfileRequest;
 import com.internlink.core.presentation.student.dto.response.StudentProfileResponse;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class StudentProfileController {
 
     private final StudentProfileService studentProfileService;
+    private final JobSearchContextService jobSearchContextService;
 
     @GetMapping("/me/profile")
     @PreAuthorize("hasRole('STUDENT')")
@@ -28,6 +31,14 @@ public class StudentProfileController {
     ) {
         StudentProfileResponse profile = studentProfileService.getProfileByUserId(userDetail.getId());
         return ResponseEntity.ok(ApiResponse.success(profile));
+    }
+
+    @GetMapping("/me/job-search-context")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ApiResponse<JobSearchContextResponse>> getMyJobSearchContext(
+        @AuthenticationPrincipal CustomUserDetail userDetail
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(jobSearchContextService.forStudent(userDetail.getId())));
     }
 
     @PutMapping("/me/profile")

@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -26,6 +28,7 @@ public class JobPositionQueryService {
     private final JobPositionMapper jobPositionMapper;
     private final com.internlink.core.shared.api.PaginatedResponseMapper paginatedResponseMapper;
     private final com.internlink.core.application.recruitment.JobPositionAccessPolicy access;
+    private final JpaJobApplicationRepository applications;
 
     @Transactional(readOnly = true)
     public List<JobPositionResponse> getAllJobs() {
@@ -87,11 +90,22 @@ public class JobPositionQueryService {
     public List<JobPositionResponse> getPublicJobs(
             String keyword, UUID termId, UUID companyId, String location, com.internlink.core.shared.enums.WorkFormat workFormat
     ) {
-        return jobPositionRepository
+        List<JobPositionResponse> rows = jobPositionRepository
                 .searchActivePublicJobs(keyword, termId, companyId, location, workFormat, OffsetDateTime.now())
                 .stream()
                 .map(jobPositionMapper::toResponse)
                 .toList();
+        return withApplicantCounts(rows);
+    }
+
+    private List<JobPositionResponse> withApplicantCounts(List<JobPositionResponse> rows) {
+        if (rows.isEmpty()) return rows;
+        Map<UUID, Long> counts = new HashMap<>();
+        for (Object[] row : applications.countApplicantsByJobIds(rows.stream().map(JobPositionResponse::getId).toList())) {
+            counts.put((UUID) row[0], ((Number) row[1]).longValue());
+        }
+        rows.forEach(row -> row.setApplicantCount(counts.getOrDefault(row.getId(), 0L)));
+        return rows;
     }
 
     @Transactional(readOnly = true)

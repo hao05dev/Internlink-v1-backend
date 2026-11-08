@@ -80,7 +80,8 @@ abstract class RecruitmentTestFixture {
                 jobRepository,
                 mapper,
                 new com.internlink.core.shared.api.PaginatedResponseMapper(),
-                new com.internlink.core.application.recruitment.JobPositionAccessPolicy(userRepository, securityGuard)),
+                new com.internlink.core.application.recruitment.JobPositionAccessPolicy(userRepository, securityGuard),
+                applicationRepository),
             new JobPositionWriteService(
                 new JobLocationResolver(),
                 jobRepository,

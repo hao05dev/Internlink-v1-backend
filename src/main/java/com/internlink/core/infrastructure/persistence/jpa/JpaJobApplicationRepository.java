@@ -50,6 +50,18 @@ public interface JpaJobApplicationRepository extends JpaRepository<JobApplicatio
 
     boolean existsByJobIdAndStudentId(UUID jobId, UUID studentId);
 
+    /** [jobId, count] cho các hồ sơ chưa rút, gom một truy vấn cho cả danh sách tin. */
+    @Query("""
+        SELECT a.job.id, COUNT(a) FROM JobApplication a
+        WHERE a.job.id IN :jobIds
+          AND a.status <> com.internlink.core.shared.enums.ApplicationStatus.WITHDRAWN
+        GROUP BY a.job.id
+        """)
+    List<Object[]> countApplicantsByJobIds(@Param("jobIds") java.util.Collection<UUID> jobIds);
+
+    @Query("SELECT DISTINCT a.job.id FROM JobApplication a WHERE a.student.id = :studentId")
+    List<UUID> findJobIdsByStudentId(@Param("studentId") UUID studentId);
+
     @Query("SELECT COUNT(a) FROM JobApplication a WHERE a.job.id = :jobId AND a.status IN ('OFFERED', 'REVIEWING', 'INTERVIEWING')")
     long countActiveApplicationsByJob(@Param("jobId") UUID jobId);
 

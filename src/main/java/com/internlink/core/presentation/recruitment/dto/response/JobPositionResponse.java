@@ -55,6 +55,9 @@ public class JobPositionResponse {
     private Boolean isExpired;
     private Boolean isAcceptingApplications;
 
+    /** Số hồ sơ đang được xét (không tính hồ sơ đã rút); chỉ điền ở danh sách công khai. */
+    private Long applicantCount;
+
     /** Danh sách kỹ năng yêu cầu chi tiết */
     @Builder.Default private List<JobSkillResponse> skills = List.of();
 
