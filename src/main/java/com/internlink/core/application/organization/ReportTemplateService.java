@@ -280,6 +280,42 @@ public class ReportTemplateService {
         return new TemplateDownload(resource, fileName, "application/msword");
     }
 
+    public TemplateDownload loadOfficialTemplateDocx(String templateCode, String programCode) {
+        ReportTemplateType type = resolveReportTemplateType(templateCode);
+        List<ReportTemplateVersion> uploaded = templateRepository.findByReportTypeAndIsActiveTrue(type);
+        if (!uploaded.isEmpty()) {
+            ReportTemplateVersion matched = uploaded.stream()
+                .filter(t -> programCode != null && programCode.equalsIgnoreCase(t.getProgramCode()))
+                .findFirst()
+                .orElse(uploaded.get(0));
+            if (matched.getFileUrl() != null && matched.getFileUrl().toLowerCase().endsWith(".docx")) {
+                return loadTemplateDownload(matched.getId());
+            }
+        }
+        Resource resource = sampleGenerator.generateSampleDocx(null, type, programCode);
+        String fileName = sampleGenerator.resolveDefaultDocxFileName(type, programCode);
+        return new TemplateDownload(resource, fileName, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    }
+
+    public ReportTemplateType resolveReportTemplateType(String templateCode) {
+        if (templateCode == null) return ReportTemplateType.OTHER;
+        try {
+            return ReportTemplateType.valueOf(templateCode.trim().toUpperCase());
+        } catch (Exception ex) {
+            return switch (templateCode.trim().toUpperCase()) {
+                case "04", "FORM_04", "FORM_04_8W" -> ReportTemplateType.FORM_04_RECEPTION_8W;
+                case "04_12W", "FORM_04_12W" -> ReportTemplateType.FORM_04_RECEPTION_12W;
+                case "M-TT-01", "M01_12W" -> ReportTemplateType.M01;
+                case "M-TT-02" -> ReportTemplateType.M02;
+                case "M-TT-03" -> ReportTemplateType.M03;
+                case "M-TT-04", "M-TT-04-KHMT" -> ReportTemplateType.M04_LECTURER_KHMT;
+                case "M-TT-04-MMT" -> ReportTemplateType.M04_LECTURER_MMT;
+                case "M-TT-05" -> ReportTemplateType.M05;
+                default -> ReportTemplateType.OTHER;
+            };
+        }
+    }
+
     public TemplateDownload loadOfficialTemplate(String templateCode, String programCode) {
         ReportTemplateType type;
         try {

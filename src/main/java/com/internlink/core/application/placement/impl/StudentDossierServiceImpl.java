@@ -178,6 +178,7 @@ public class StudentDossierServiceImpl implements StudentDossierService {
         boolean isSubmitted = doc != null;
         String status = !isSubmitted ? "MISSING" : ("REJECTED".equalsIgnoreCase(doc.getStatus()) ? "REVISION_REQUIRED" : "APPROVED");
         String downloadUrl = "/api/v1/organization/templates/official/" + code + "/download";
+        String previewUrl = "/api/v1/organization/templates/official/" + code + "/preview";
 
         return StudentDossierItemDto.builder()
             .templateCode(code)
@@ -193,6 +194,7 @@ public class StudentDossierServiceImpl implements StudentDossierService {
             .submittedFileSizeBytes(doc != null ? doc.getSizeBytes() : null)
             .submittedAt(doc != null ? doc.getCreatedAt() : null)
             .downloadTemplateUrl(downloadUrl)
+            .previewTemplateUrl(previewUrl)
             .fileUrl(doc != null ? doc.getExternalUrl() : null)
             .build();
     }

@@ -48,6 +48,7 @@ public class StudentDossierResponse {
         private OffsetDateTime submittedAt;
         private String feedback;
         private String downloadTemplateUrl;
+        private String previewTemplateUrl;
         private String fileUrl;
     }
 }

@@ -55,6 +55,7 @@ public class CvJdAnalysisService {
         payload.put("content_base64", Base64.getEncoder().encodeToString(readBounded(download)));
         payload.put("job", jobPayload(job, jobSkills.findByIdJobId(job.getId())));
         payload.put("render_pages", true);
+        payload.put("include_github", request.includeGithub());
 
         Map<String, Object> result = new HashMap<>(client.infer(ENDPOINT, payload));
         result.put("jobId", job.getId());

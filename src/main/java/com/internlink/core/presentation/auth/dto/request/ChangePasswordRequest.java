@@ -17,7 +17,7 @@ public class ChangePasswordRequest {
     private String currentPassword;
 
     @NotBlank(message = "Mật khẩu mới không được để trống")
-    @Size(min = 15, max = 72, message = "Mật khẩu mới phải từ 15 đến 72 ký tự")
+    @Size(min = 8, max = 72, message = "Mật khẩu mới phải từ 8 đến 72 ký tự")
     private String newPassword;
 
     @NotBlank(message = "Xác nhận mật khẩu mới không được để trống")

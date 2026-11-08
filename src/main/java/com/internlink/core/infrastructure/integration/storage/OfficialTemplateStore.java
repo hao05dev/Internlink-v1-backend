@@ -3,14 +3,17 @@ package com.internlink.core.infrastructure.integration.storage;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 
 /**
  * Đọc biểu mẫu chính thức (M-TT-01..05, Biểu mẫu 04) từ R2 theo khóa cố định
- * {@code <prefix>/templates/official/<fileName>}. Không đọc từ ổ đĩa cục bộ.
+ * {@code <prefix>/templates/official/<fileName>}, có fallback đọc từ thư mục cục bộ uploads/templates/official.
  */
 @Slf4j
 @Component
@@ -28,13 +31,20 @@ public class OfficialTemplateStore {
         String key = key(fileName);
         try {
             return Optional.of(r2.loadAsResource(key));
-        } catch (ResourceNotFoundException ex) {
-            log.warn("Không tìm thấy biểu mẫu chính thức trên R2: {}", key);
-            return Optional.empty();
-        } catch (RuntimeException ex) {
-            log.warn("Không tải được biểu mẫu chính thức từ R2 key={}: {}", key, ex.getMessage());
-            return Optional.empty();
+        } catch (Exception ex) {
+            log.debug("Không tìm thấy biểu mẫu trên R2 key={}: {}. Thử tìm ở ổ đĩa cục bộ.", key, ex.getMessage());
         }
+
+        try {
+            Path localPath = Path.of("uploads", "templates", "official", fileName);
+            if (Files.exists(localPath) && Files.isReadable(localPath)) {
+                return Optional.of(new FileSystemResource(localPath));
+            }
+        } catch (Exception e) {
+            log.warn("Lỗi khi kiểm tra biểu mẫu từ ổ đĩa cục bộ: {}", e.getMessage());
+        }
+
+        return Optional.empty();
     }
 
     public String key(String fileName) {

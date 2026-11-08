@@ -127,6 +127,15 @@ public class ReportTemplateController {
         return buildDownloadResponse(download.resource(), download.fileName(), download.mimeType());
     }
 
+    @GetMapping("/official/{templateCode}/preview")
+    public ResponseEntity<Resource> previewOfficialTemplate(
+        @PathVariable String templateCode,
+        @RequestParam(required = false, defaultValue = "DEFAULT") String programCode
+    ) {
+        TemplateDownload download = templateService.loadOfficialTemplateDocx(templateCode, programCode);
+        return buildPreviewResponse(download.resource(), download.fileName(), download.mimeType());
+    }
+
     @GetMapping("/official/{templateCode}/download")
     public ResponseEntity<Resource> downloadOfficialTemplate(
         @PathVariable String templateCode,
@@ -143,6 +152,22 @@ public class ReportTemplateController {
     ) {
         TemplateDownload download = templateService.generateFallbackDownload(reportType, programCode);
         return buildDownloadResponse(download.resource(), download.fileName(), download.mimeType());
+    }
+
+    private ResponseEntity<Resource> buildPreviewResponse(Resource resource, String filename, String mimeType) {
+        String safeName = (filename != null && !filename.isBlank()) ? filename : "bieu-mau.docx";
+        String encoded = URLEncoder.encode(safeName, StandardCharsets.UTF_8).replace("+", "%20");
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        try {
+            if (mimeType != null && !mimeType.isBlank()) {
+                mediaType = MediaType.parseMediaType(mimeType);
+            }
+        } catch (Exception ignored) {}
+
+        return ResponseEntity.ok()
+            .contentType(mediaType)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encoded + "\"; filename*=UTF-8''" + encoded)
+            .body(resource);
     }
 
     private ResponseEntity<Resource> buildDownloadResponse(Resource resource, String filename, String mimeType) {
