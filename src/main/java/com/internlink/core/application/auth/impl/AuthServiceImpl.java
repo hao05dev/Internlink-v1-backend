@@ -13,6 +13,8 @@ import com.internlink.core.presentation.auth.dto.request.LoginRequest;
 import com.internlink.core.presentation.auth.dto.request.RegisterCompanyRequest;
 import com.internlink.core.presentation.auth.dto.response.AuthResponse;
 import com.internlink.core.presentation.auth.dto.response.UserSummaryDto;
+import com.internlink.core.shared.error.AppException;
+import com.internlink.core.shared.error.ErrorCode;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
 import com.internlink.core.shared.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,7 +48,7 @@ public class AuthServiceImpl implements AuthService {
         User user = passwordLogin.authenticate(request.getEmail().trim().toLowerCase(Locale.ROOT), request.getPassword());
         if (user == null) {
             audit.record(null, "USER_LOGIN_FAILED", "FAILURE", httpRequest);
-            throw new UnauthorizedException("Không thể đăng nhập. Vui lòng kiểm tra thông tin hoặc thử lại sau.");
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
         refreshTokens.createSessionAndToken(user, httpRequest, response);
         String token = jwtUtil.generateToken(CustomUserDetail.create(user));

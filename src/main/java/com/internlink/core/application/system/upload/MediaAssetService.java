@@ -2,7 +2,9 @@ package com.internlink.core.application.system.upload;
 
 import com.internlink.core.infrastructure.integration.storage.*;
 import com.internlink.core.infrastructure.persistence.jdbc.MediaAssetRepository;
+import com.internlink.core.shared.exception.BadRequestException;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
+import com.internlink.core.shared.security.ResourceAuthorization;
 
 import lombok.RequiredArgsConstructor;
 
@@ -66,6 +68,29 @@ public class MediaAssetService {
                         stored.getChecksum());
         assets.insert(asset);
         return new Uploaded(asset.id(), asset.url(), asset.name(), asset.mime(), asset.size());
+    }
+
+    /** Xoá ảnh/tệp vừa tải lên nhưng chưa được bài viết/tin nào dùng (chỉ chủ sở hữu hoặc admin). */
+    @Transactional
+    public void delete(UUID id) {
+        var actor = access.actor();
+        var asset = assets.get(id);
+        if (!actor.getId().equals(asset.owner()) && !ResourceAuthorization.isAdmin(actor))
+            throw new ResourceNotFoundException("MediaAsset", "id", id);
+        if (assets.referenced(asset))
+            throw new BadRequestException("Ảnh/tệp đang được sử dụng, hãy gỡ khỏi bài viết rồi lưu trước");
+        assets.delete(id);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            r2.delete(asset.key());
+                        } catch (RuntimeException ignored) {
+                            // R2MaintenanceService sẽ dọn object mồ côi sau.
+                        }
+                    }
+                });
     }
 
     @Transactional(readOnly = true)

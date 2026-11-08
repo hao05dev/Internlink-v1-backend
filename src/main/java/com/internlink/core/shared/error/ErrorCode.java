@@ -21,6 +21,8 @@ public enum ErrorCode {
 
     // === XÁC THỰC & PHÂN QUYỀN (AUTH) ===
     UNAUTHORIZED("auth_unauthorized", HttpStatus.UNAUTHORIZED, "Phiên đăng nhập đã hết hạn hoặc không hợp lệ"),
+    INVALID_CREDENTIALS("auth_invalid_credentials", HttpStatus.UNAUTHORIZED, "Email hoặc mật khẩu không chính xác"),
+    ACCOUNT_INACTIVE("auth_account_inactive", HttpStatus.UNAUTHORIZED, "Tài khoản đã bị khóa hoặc chưa được kích hoạt"),
     FORBIDDEN_ACCESS("auth_forbidden", HttpStatus.FORBIDDEN, "Bạn không có quyền thực hiện thao tác này"),
     ACCOUNT_LOCKED("auth_account_locked", HttpStatus.LOCKED, "Tài khoản tạm thời bị khóa do đăng nhập sai nhiều lần"),
 

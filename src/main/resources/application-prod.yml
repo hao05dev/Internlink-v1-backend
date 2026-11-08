@@ -6,3 +6,10 @@ internlink:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   email:
     public-base-url: ${APP_PUBLIC_URL}
+
+# Tắt Swagger trên môi trường production
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

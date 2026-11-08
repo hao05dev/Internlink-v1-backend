@@ -29,6 +29,7 @@ public class PostResponse {
     private String content;
     private String coverImageUrl;
     private List<Map<String, Object>> attachmentUrls;
+    private List<Map<String, Object>> galleryImages;
     private List<String> tags;
     private Boolean isPinned;
     private String visibility;

@@ -23,6 +23,7 @@ public class CareerGuidePostMapper {
             .content(post.getContent())
             .coverImageUrl(post.getCoverImageUrl())
             .attachmentUrls(post.getAttachmentUrls())
+            .galleryImages(post.getGalleryImages())
             .tags(post.getTags())
             .isPinned(post.getIsPinned())
             .visibility(post.getVisibility())

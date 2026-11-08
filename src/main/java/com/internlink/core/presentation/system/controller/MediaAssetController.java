@@ -29,6 +29,17 @@ public class MediaAssetController {
         return ApiResponse.success(service.upload(file, purpose, contextId, scope));
     }
 
+    @DeleteMapping("/api/v1/media/{id}")
+    public ApiResponse<Void> delete(@PathVariable UUID id) {
+        service.delete(id);
+        return ApiResponse.success(null);
+    }
+
+    @GetMapping("/api/v1/media/limits")
+    public ApiResponse<MediaLimits> limits(@RequestParam MediaPurpose purpose) {
+        return ApiResponse.success(MediaLimits.of(purpose));
+    }
+
     @GetMapping("/api/v1/media/{id}")
     public ResponseEntity<Resource> privateFile(@PathVariable UUID id) {
         return response(service.download(id, false));

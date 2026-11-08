@@ -116,3 +116,16 @@ notifications:
   realtime-enabled: ${NOTIFICATION_REALTIME_ENABLED:true}
   reminders-enabled: ${NOTIFICATION_REMINDERS_ENABLED:false}
   campaigns-enabled: ${NOTIFICATION_CAMPAIGNS_ENABLED:false}
+
+# Swagger UI: http://localhost:8080/swagger-ui.html
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+    persist-authorization: true
+    # Tự đọc cookie XSRF-TOKEN và gửi header X-XSRF-TOKEN cho POST/PUT/PATCH/DELETE
+    csrf:
+      enabled: true

@@ -68,16 +68,25 @@ class MediaContentValidatorTest {
     }
 
     @Test
-    void jobAttachmentAcceptsOnlyPdf() {
+    void jobAttachmentAcceptsSameDocumentTypesAsPosts() throws Exception {
+        var content =
+                validator.validate(
+                        new MockMultipartFile(
+                                "file",
+                                "readme.txt",
+                                "text/plain",
+                                "Nội dung".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                        MediaPurpose.JOB_ATTACHMENT);
+        assertThat(content.mime()).isEqualTo("text/plain");
         assertThatThrownBy(
                         () ->
                                 validator.validate(
                                         new MockMultipartFile(
                                                 "file",
-                                                "readme.txt",
-                                                "text/plain",
-                                                "Nội dung".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                                                "setup.exe",
+                                                "application/octet-stream",
+                                                new byte[] {77, 90, 0, 1}),
                                         MediaPurpose.JOB_ATTACHMENT))
-                .hasMessageContaining("PDF");
+                .hasMessageContaining("không được hỗ trợ");
     }
 }

@@ -35,6 +35,8 @@ public class CreatePostRequest {
 
     private List<Map<String, Object>> attachmentUrls;
 
+    private List<Map<String, Object>> galleryImages;
+
     private List<String> tags;
 
     private Boolean isPinned;

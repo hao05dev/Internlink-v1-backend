@@ -56,6 +56,11 @@ public class CareerGuidePost extends BaseEntity {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
+    @Column(name = "gallery_images", columnDefinition = "jsonb", nullable = false)
+    private List<Map<String, Object>> galleryImages = List.of();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Builder.Default
     @Column(name = "tags", columnDefinition = "jsonb", nullable = false)
     private List<String> tags = List.of();
 

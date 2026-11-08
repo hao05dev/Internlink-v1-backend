@@ -36,8 +36,6 @@ public class MediaContentValidator {
                 name.contains(".")
                         ? name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT)
                         : "";
-        if (purpose == MediaPurpose.JOB_ATTACHMENT && !"pdf".equals(ext))
-            throw new BadRequestException("Tin tuyển dụng chỉ nhận tệp PDF");
         if (!Set.of("png", "jpg", "jpeg").contains(ext)) {
             if (!purpose.attachment()) throw new BadRequestException("Chỉ nhận ảnh PNG hoặc JPEG");
             String mime = DocumentContentValidator.MIME.get(ext);

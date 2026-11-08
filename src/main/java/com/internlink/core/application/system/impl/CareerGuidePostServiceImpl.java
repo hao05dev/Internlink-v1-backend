@@ -2,6 +2,7 @@ package com.internlink.core.application.system.impl;
 
 import com.internlink.core.application.system.CareerGuidePostService;
 import com.internlink.core.domain.auth.User;
+import com.internlink.core.application.system.upload.MediaGallery;
 import com.internlink.core.domain.system.CareerGuidePost;
 import com.internlink.core.infrastructure.persistence.jpa.JpaCareerGuidePostRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
@@ -145,11 +146,6 @@ public class CareerGuidePostServiceImpl implements CareerGuidePostService {
 
         OffsetDateTime publishedAt = "PUBLISHED".equals(status) ? OffsetDateTime.now() : null;
 
-        media.post(
-                author.getId(),
-                request.getCoverImageUrl(),
-                request.getAttachmentUrls(),
-                request.getContent());
         CareerGuidePost post =
                 CareerGuidePost.builder()
                         .author(author)
@@ -160,6 +156,7 @@ public class CareerGuidePostServiceImpl implements CareerGuidePostService {
                         .summary(request.getSummary().trim())
                         .content(request.getContent().trim())
                         .coverImageUrl(request.getCoverImageUrl())
+                        .galleryImages(MediaGallery.normalize(request.getGalleryImages()))
                         .attachmentUrls(
                                 request.getAttachmentUrls() != null
                                         ? request.getAttachmentUrls()
@@ -175,11 +172,7 @@ public class CareerGuidePostServiceImpl implements CareerGuidePostService {
                         .publishedAt(publishedAt)
                         .build();
 
-        media.post(
-                post.getAuthor().getId(),
-                post.getCoverImageUrl(),
-                post.getAttachmentUrls(),
-                post.getContent());
+        applyMediaRules(post);
         CareerGuidePost saved = postRepository.save(post);
         log.info("Created new CareerGuidePost id={} title='{}'", saved.getId(), saved.getTitle());
         return postMapper.toResponse(saved);
@@ -227,6 +220,10 @@ public class CareerGuidePostServiceImpl implements CareerGuidePostService {
             post.setAttachmentUrls(request.getAttachmentUrls());
         }
 
+        if (request.getGalleryImages() != null) {
+            post.setGalleryImages(MediaGallery.normalize(request.getGalleryImages()));
+        }
+
         if (request.getTags() != null) {
             post.setTags(request.getTags());
         }
@@ -249,11 +246,7 @@ public class CareerGuidePostServiceImpl implements CareerGuidePostService {
             post.setStatus(newStatus);
         }
 
-        media.post(
-                post.getAuthor().getId(),
-                post.getCoverImageUrl(),
-                post.getAttachmentUrls(),
-                post.getContent());
+        applyMediaRules(post);
         CareerGuidePost saved = postRepository.save(post);
         log.info("Updated CareerGuidePost id={} title='{}'", saved.getId(), saved.getTitle());
         return postMapper.toResponse(saved);
@@ -280,11 +273,7 @@ public class CareerGuidePostServiceImpl implements CareerGuidePostService {
                         .orElseThrow(
                                 () -> new ResourceNotFoundException("Bài viết cẩm nang", "id", id));
         post.setIsPinned(!Boolean.TRUE.equals(post.getIsPinned()));
-        media.post(
-                post.getAuthor().getId(),
-                post.getCoverImageUrl(),
-                post.getAttachmentUrls(),
-                post.getContent());
+        applyMediaRules(post);
         CareerGuidePost saved = postRepository.save(post);
         return postMapper.toResponse(saved);
     }
@@ -305,13 +294,21 @@ public class CareerGuidePostServiceImpl implements CareerGuidePostService {
             post.setPublishedAt(OffsetDateTime.now());
         }
         post.setStatus(newStatus);
+        applyMediaRules(post);
+        CareerGuidePost saved = postRepository.save(post);
+        return postMapper.toResponse(saved);
+    }
+
+    /** Ảnh bìa mặc định = ảnh đầu của gallery, rồi kiểm tra quyền sở hữu mọi ảnh/tệp. */
+    private void applyMediaRules(CareerGuidePost post) {
+        post.setCoverImageUrl(
+                MediaGallery.coverFor(post.getGalleryImages(), post.getCoverImageUrl()));
         media.post(
                 post.getAuthor().getId(),
                 post.getCoverImageUrl(),
+                post.getGalleryImages(),
                 post.getAttachmentUrls(),
                 post.getContent());
-        CareerGuidePost saved = postRepository.save(post);
-        return postMapper.toResponse(saved);
     }
 
     private String generateUniqueSlug(String title, UUID currentId) {
