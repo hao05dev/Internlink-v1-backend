@@ -27,9 +27,31 @@ public final class ResourceAuthorization {
         return isAdmin(actor) || isSchoolOffice(actor);
     }
 
+    /** Quản lý Khoa chỉ quản lý hồ sơ của sinh viên thuộc khoa mình. */
     public static boolean managesDepartment(User actor, UUID departmentId) {
         return isAdmin(actor) || (actor.getRole() == UserRole.FACULTY_ADMIN
-            && actor.getDepartment() != null && actor.getDepartment().getId().equals(departmentId));
+            && departmentId != null && DepartmentScope.sameDepartment(actor, departmentId));
+    }
+
+    /** Quản lý Khoa (bất kỳ khoa nào) làm việc trên kỳ cấp Trường; dữ liệu phải lọc theo khoa của họ. */
+    public static boolean isFacultyAdmin(User actor) {
+        return actor != null && actor.getRole() == UserRole.FACULTY_ADMIN && actor.getDepartment() != null;
+    }
+
+    /** Thao tác trên phần dữ liệu của khoa trong một kỳ cấp Trường. */
+    public static boolean worksOnTerm(User actor) {
+        return isAdmin(actor) || isFacultyAdmin(actor);
+    }
+
+    /** GVHD được phân công hướng dẫn lần thực tập này. */
+    public static boolean supervises(User actor, InternshipPlacement placement) {
+        return actor != null && actor.getRole() == UserRole.LECTURER && placement.getLecturer() != null
+            && actor.getId().equals(placement.getLecturer().getId());
+    }
+
+    /** GVHD chấm và công bố điểm cho SV mình hướng dẫn; Quản lý Khoa giám sát, có thể ghi đè. */
+    public static boolean canGrade(User actor, InternshipPlacement placement) {
+        return supervises(actor, placement) || managesDepartment(actor, DepartmentScope.idOf(placement));
     }
 
     public static boolean representsCompany(User actor, UUID companyId) {
@@ -51,7 +73,7 @@ public final class ResourceAuthorization {
         return isAdmin(actor)
             || actor.getRole() == UserRole.STUDENT && actor.getId().equals(application.getStudent().getId())
             || representsCompany(actor, application.getJob().getCompany().getId())
-            || managesDepartment(actor, application.getJob().getDepartment().getId());
+            || managesDepartment(actor, DepartmentScope.idOfStudent(application.getStudent()));
     }
 
     public static boolean canReadAgreement(User actor, LearningAgreement agreement) {
@@ -71,7 +93,7 @@ public final class ResourceAuthorization {
                 && actor.getId().equals(placement.getMentor().getId())
             || actor.getRole() == UserRole.LECTURER && actor.getId().equals(placement.getLecturer().getId())
             || placement.getCompany() != null && representsCompany(actor, placement.getCompany().getId())
-            || managesDepartment(actor, placement.getTerm().getDepartment().getId());
+            || managesDepartment(actor, DepartmentScope.idOf(placement));
     }
 
     public static void require(boolean allowed) {

@@ -95,7 +95,6 @@ class MediaAssetPostgresTest {
                         JobPosition.builder()
                                 .company(company)
                                 .term(term)
-                                .department(term.getDepartment())
                                 .title("Media fixture")
                                 .location("Test")
                                 .workFormat(WorkFormat.ONSITE)
@@ -104,7 +103,7 @@ class MediaAssetPostgresTest {
                                 .status(JobStatus.DRAFT)
                                 .build());
         assertThat(assets.publicReference(asset)).isFalse();
-        assertThat(assets.departmentReference(asset, term.getDepartment().getId())).isTrue();
+        assertThat(assets.departmentReference(asset, UUID.randomUUID())).isFalse();
         job.setStatus(JobStatus.APPROVED);
         jobs.saveAndFlush(job);
         assertThat(assets.publicReference(asset)).isTrue();

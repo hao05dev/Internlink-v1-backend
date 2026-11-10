@@ -51,7 +51,7 @@ class RosterAttemptHistoryResolverTest {
         StudentRoster current = roster(hk3, "B2110954", student);
         StudentRoster previous = roster(hk2, "B2110954", null); // dòng cũ chưa cấp tài khoản
         InternshipPlacement terminated = placement(hk2, PlacementStatus.TERMINATED);
-        when(rosterRepository.findInOtherTermsByStudentCodes(anyCollection(), eq(department.getId()), eq(hk3.getId())))
+        when(rosterRepository.findInOtherTermsByStudentCodes(anyCollection(), eq(hk3.getId())))
                 .thenReturn(List.of(previous));
         when(placementRepository.findByStudentIdsAndTermIds(anyCollection(), anyCollection()))
                 .thenReturn(List.of(terminated));
@@ -67,7 +67,7 @@ class RosterAttemptHistoryResolverTest {
     @Test
     void laterTermsDoNotCountAsPriorAttempts() {
         StudentRoster current = roster(hk2, "B2110954", student);
-        when(rosterRepository.findInOtherTermsByStudentCodes(anyCollection(), any(), any()))
+        when(rosterRepository.findInOtherTermsByStudentCodes(anyCollection(), any()))
                 .thenReturn(List.of(roster(hk3, "B2110954", student)));
 
         StudentRosterResponse response = StudentRosterResponse.builder().studentCode("B2110954").build();
@@ -96,7 +96,7 @@ class RosterAttemptHistoryResolverTest {
     }
 
     private InternshipTerm term(String name, LocalDate start) {
-        return withId(InternshipTerm.builder().termName(name).startDate(start).department(department).build());
+        return withId(InternshipTerm.builder().termName(name).startDate(start).build());
     }
 
     private StudentRoster roster(InternshipTerm term, String code, User claimedUser) {

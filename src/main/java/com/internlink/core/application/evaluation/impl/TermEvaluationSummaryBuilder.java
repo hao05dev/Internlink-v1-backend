@@ -32,8 +32,7 @@ public class TermEvaluationSummaryBuilder {
     private final JpaAssessmentComponentScoreRepository componentScoreRepository;
     private final JpaRubricEvaluationRepository rubricRepository;
 
-    public List<FacultyEvaluationSummaryResponse> buildSummary(UUID termId) {
-        List<InternshipPlacement> placements = placementRepository.findByTermId(termId);
+    public List<FacultyEvaluationSummaryResponse> buildSummary(UUID termId, List<InternshipPlacement> placements) {
         List<FacultyEvaluationSummaryResponse> summaryList = new ArrayList<>();
 
         for (InternshipPlacement p : placements) {

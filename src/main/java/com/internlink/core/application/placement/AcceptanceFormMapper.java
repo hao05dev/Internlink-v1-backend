@@ -1,5 +1,6 @@
 package com.internlink.core.application.placement;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.domain.placement.InternshipDurationRule;
 import com.internlink.core.domain.placement.InternshipPlacement;
 import com.internlink.core.domain.placement.StudentFoundApplication;
@@ -20,8 +21,8 @@ public class AcceptanceFormMapper {
     public StudentFoundResponse toResponse(StudentFoundApplication a) {
         var term = a.getTerm();
         var student = a.getStudent();
-        var department = term.getDepartment();
         var roster = rosters.findByTermIdAndClaimedUserId(term.getId(), student.getId()).orElse(null);
+        var department = roster != null ? DepartmentScope.of(roster) : DepartmentScope.ofStudent(student);
         Integer credits = roster != null ? roster.getInternshipCredits() : null;
         return new StudentFoundResponse(a.getId(), term.getId(), student.getId(), a.getHostName(),
             a.getHostAddress(), a.getContactName(), a.getContactEmail(), a.getWorkDescription(),

@@ -117,7 +117,7 @@ class CoreOrganizationServicesTest {
 
     private InternshipTerm term(Department department) {
         InternshipTerm value =
-                InternshipTerm.builder().department(department).code("T1").termName("Term").build();
+                InternshipTerm.builder().code("T1").termName("Term").build();
         value.setId(UUID.randomUUID());
         return value;
     }
@@ -216,20 +216,15 @@ class CoreOrganizationServicesTest {
         InternshipTermServiceImpl service =
                 new InternshipTermServiceImpl(
                         termRepository,
-                        departmentRepository,
                         placementRepository,
                         userRepository,
                         securityGuard,
                         auditLogService);
-        Department department = department();
-        User actor = user(UserRole.FACULTY_ADMIN);
-        actor.setDepartment(department);
+        User actor = user(UserRole.SCHOOL_OFFICE);
         when(securityGuard.currentUser()).thenReturn(CustomUserDetail.create(actor));
         when(userRepository.findById(actor.getId())).thenReturn(Optional.of(actor));
-        when(departmentRepository.findById(department.getId())).thenReturn(Optional.of(department));
         InternshipTermRequest request =
                 InternshipTermRequest.builder()
-                        .departmentId(department.getId())
                         .code("T1")
                         .termName("Term")
                         .academicYear("2026")
@@ -258,7 +253,8 @@ class CoreOrganizationServicesTest {
                         auditLogService,
                         new StudentRosterMapper(),
                         mock(StudentRosterAccountProvisioner.class),
-                        mock(RosterAttemptHistoryResolver.class));
+                        mock(RosterAttemptHistoryResolver.class),
+                        new com.internlink.core.application.organization.TermDepartmentScope(rosterRepository, placementRepository, org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class)));
         Department termDepartment = department();
         User actor = user(UserRole.FACULTY_ADMIN);
         actor.setDepartment(termDepartment);
@@ -296,7 +292,8 @@ class CoreOrganizationServicesTest {
                         auditLogService,
                         new StudentRosterMapper(),
                         mock(StudentRosterAccountProvisioner.class),
-                        mock(RosterAttemptHistoryResolver.class));
+                        mock(RosterAttemptHistoryResolver.class),
+                        new com.internlink.core.application.organization.TermDepartmentScope(rosterRepository, placementRepository, org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class)));
         Department department = department();
         User actor = user(UserRole.FACULTY_ADMIN);
         actor.setDepartment(department);

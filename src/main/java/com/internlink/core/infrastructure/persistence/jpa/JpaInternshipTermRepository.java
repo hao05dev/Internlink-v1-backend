@@ -13,7 +13,7 @@ import java.util.UUID;
 @Repository
 public interface JpaInternshipTermRepository extends JpaRepository<InternshipTerm, UUID> {
     Optional<InternshipTerm> findByCode(String code);
-    List<InternshipTerm> findByDepartmentId(UUID departmentId);
+    List<InternshipTerm> findAllByOrderByStartDateDesc();
     List<InternshipTerm> findByStatus(TermStatus status);
     boolean existsByCode(String code);
 }

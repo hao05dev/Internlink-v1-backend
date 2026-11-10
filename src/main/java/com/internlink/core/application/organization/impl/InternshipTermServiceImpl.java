@@ -3,9 +3,7 @@ package com.internlink.core.application.organization.impl;
 import com.internlink.core.application.organization.InternshipTermService;
 import com.internlink.core.application.system.AuditLogService;
 import com.internlink.core.shared.enums.TermStatus;
-import com.internlink.core.domain.organization.Department;
 import com.internlink.core.domain.organization.InternshipTerm;
-import com.internlink.core.infrastructure.persistence.jpa.JpaDepartmentRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipPlacementRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipTermRepository;
 import com.internlink.core.presentation.organization.dto.request.InternshipTermRequest;
@@ -30,7 +28,6 @@ import java.util.UUID;
 public class InternshipTermServiceImpl implements InternshipTermService {
 
     private final JpaInternshipTermRepository termRepository;
-    private final JpaDepartmentRepository departmentRepository;
     private final JpaInternshipPlacementRepository placementRepository;
     private final JpaUserRepository userRepository;
     private final SecurityGuard securityGuard;
@@ -54,7 +51,7 @@ public class InternshipTermServiceImpl implements InternshipTermService {
     @Override
     @Transactional(readOnly = true)
     public List<InternshipTermResponse> getAllTerms() {
-        return termRepository.findAll().stream()
+        return termRepository.findAllByOrderByStartDateDesc().stream()
             .map(this::mapToResponse)
             .toList();
     }
@@ -76,14 +73,6 @@ public class InternshipTermServiceImpl implements InternshipTermService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<InternshipTermResponse> getTermsByDepartment(UUID departmentId) {
-        return termRepository.findByDepartmentId(departmentId).stream()
-            .map(this::mapToResponse)
-            .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public InternshipTermResponse getTermById(UUID id) {
         InternshipTerm term = termRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", id));
@@ -93,10 +82,7 @@ public class InternshipTermServiceImpl implements InternshipTermService {
     @Override
     @Transactional
     public InternshipTermResponse createTerm(InternshipTermRequest request) {
-        Department department = departmentRepository.findById(request.getDepartmentId())
-            .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            userRepository.findById(securityGuard.currentUser().getId()).orElseThrow(), department.getId()));
+        requireSchoolOffice();
 
         if (termRepository.existsByCode(request.getCode().trim().toUpperCase())) {
             throw new BadRequestException("Mã kỳ thực tập '" + request.getCode() + "' đã tồn tại");
@@ -111,7 +97,6 @@ public class InternshipTermServiceImpl implements InternshipTermService {
         }
 
         InternshipTerm term = InternshipTerm.builder()
-            .department(department)
             .code(request.getCode().trim().toUpperCase())
             .termName(request.getTermName().trim())
             .academicYear(request.getAcademicYear().trim())
@@ -151,8 +136,7 @@ public class InternshipTermServiceImpl implements InternshipTermService {
     public InternshipTermResponse updateTermStatus(UUID termId, TermStatus newStatus) {
         InternshipTerm term = termRepository.findById(termId)
             .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            userRepository.findById(securityGuard.currentUser().getId()).orElseThrow(), term.getDepartment().getId()));
+        requireSchoolOffice();
 
         TermStatus currentStatus = term.getStatus();
 
@@ -214,11 +198,15 @@ public class InternshipTermServiceImpl implements InternshipTermService {
         return mapToResponse(saved);
     }
 
+    /** Kỳ thực tập là cấp Trường: chỉ Văn phòng Trường (hoặc ADMIN) tạo và chuyển trạng thái. */
+    private void requireSchoolOffice() {
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(
+            userRepository.findById(securityGuard.currentUser().getId()).orElseThrow()));
+    }
+
     private InternshipTermResponse mapToResponse(InternshipTerm entity) {
         return InternshipTermResponse.builder()
             .id(entity.getId())
-            .departmentId(entity.getDepartment().getId())
-            .departmentName(entity.getDepartment().getName())
             .code(entity.getCode())
             .termName(entity.getTermName())
             .academicYear(entity.getAcademicYear())

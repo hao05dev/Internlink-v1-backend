@@ -59,14 +59,15 @@ class RosterLecturerAssignmentServiceTest {
     void setUp() {
         service = new RosterLecturerAssignmentServiceImpl(rosters, terms, users, placements,
                 new PlacementEligibilityService(placements, rosters, null), security, audit, notifications,
-                new StudentRosterMapper());
+                new StudentRosterMapper(), new com.internlink.core.application.organization.TermDepartmentScope(rosters, placements,
+                org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class)));
         Department department = Department.builder().code("CICT").name("CNTT&TT").build();
         department.setId(UUID.randomUUID());
         User admin = user(UserRole.FACULTY_ADMIN, department, "Quản lý", "qltt@ctu.edu.vn");
         oldLecturer = user(UserRole.LECTURER, department, "GV Cũ", "old@ctu.edu.vn");
         newLecturer = user(UserRole.LECTURER, department, "GV Mới", "new@ctu.edu.vn");
         student = user(UserRole.STUDENT, department, "Sinh viên A", "a@student.ctu.edu.vn");
-        term = InternshipTerm.builder().department(department).status(TermStatus.APPLICATION_OPEN).termName("HK2").build();
+        term = InternshipTerm.builder().status(TermStatus.APPLICATION_OPEN).termName("HK2").build();
         term.setId(UUID.randomUUID());
         AcademicProgram program = AcademicProgram.builder().name("KTPM").department(department).build();
         program.setId(UUID.randomUUID());
@@ -153,14 +154,15 @@ class RosterLecturerAssignmentServiceTest {
                 .studentCode("B2100002").fullName("Sinh viên B").build();
         unassigned.setId(UUID.randomUUID());
         when(terms.findById(term.getId())).thenReturn(Optional.of(term));
-        when(rosters.findByTermIdOrderByStudentCodeAsc(term.getId())).thenReturn(List.of(roster, unassigned));
+        when(rosters.findByTermIdAndProgramDepartmentIdOrderByStudentCodeAsc(term.getId(), roster.getProgram().getDepartment().getId()))
+                .thenReturn(List.of(roster, unassigned));
 
         var result = service.assignBulk(term.getId(), List.of(roster.getId(), unassigned.getId(), UUID.randomUUID()),
                 newLecturer.getId(), null);
 
         assertThat(result.updated()).isEqualTo(2);
         assertThat(result.unchanged()).isZero();
-        assertThat(result.failures()).containsExactly("1 dòng không thuộc học kỳ này");
+        assertThat(result.failures()).containsExactly("1 dòng không thuộc học kỳ này hoặc không thuộc khoa của bạn");
         assertThat(unassigned.getAssignedLecturer()).isSameAs(newLecturer);
     }
 

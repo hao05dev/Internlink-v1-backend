@@ -131,34 +131,6 @@ class RecommendationEligibilityServiceTest {
     }
 
     @Test
-    void jobEligibility_failsWhenDepartmentMismatch() {
-        OffsetDateTime now = OffsetDateTime.now();
-        UUID jobId = UUID.randomUUID();
-        Department itDept = Department.builder().name("CNTT").build();
-        itDept.setId(UUID.randomUUID());
-        Department econDept = Department.builder().name("Kinh tế").build();
-        econDept.setId(UUID.randomUUID());
-
-        JobPosition job = JobPosition.builder()
-            .title("Backend Dev")
-            .status(JobStatus.APPROVED)
-            .department(itDept)
-            .vacancies(5)
-            .build();
-        job.setId(jobId);
-
-        AcademicProgram econProgram = AcademicProgram.builder().department(econDept).build();
-        StudentProfile studentProfile = StudentProfile.builder().program(econProgram).build();
-
-        when(offerRepository.countReservedPlaces(eq(jobId), any())).thenReturn(0L);
-        when(studentProfileRepository.findByUserId(studentId)).thenReturn(Optional.of(studentProfile));
-
-        EligibilityResult result = eligibilityService.evaluateJobEligibility(studentId, job, now);
-        assertThat(result.isEligible()).isFalse();
-        assertThat(result.reasonCode()).isEqualTo("DEPARTMENT_MISMATCH");
-    }
-
-    @Test
     void jobEligibility_succeedsWhenAllPass() {
         OffsetDateTime now = OffsetDateTime.now();
         UUID jobId = UUID.randomUUID();
@@ -170,7 +142,6 @@ class RecommendationEligibilityServiceTest {
         job.setId(jobId);
 
         when(offerRepository.countReservedPlaces(eq(jobId), any())).thenReturn(1L);
-        when(studentProfileRepository.findByUserId(studentId)).thenReturn(Optional.empty());
         when(applicationRepository.existsByJobIdAndStudentId(jobId, studentId)).thenReturn(false);
 
         EligibilityResult result = eligibilityService.evaluateJobEligibility(studentId, job, now);

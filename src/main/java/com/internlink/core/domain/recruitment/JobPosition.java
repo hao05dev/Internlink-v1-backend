@@ -2,7 +2,6 @@ package com.internlink.core.domain.recruitment;
 
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.company.Company;
-import com.internlink.core.domain.organization.Department;
 import com.internlink.core.domain.organization.InternshipTerm;
 import com.internlink.core.shared.domain.BaseEntity;
 import com.internlink.core.shared.enums.JobStatus;
@@ -38,9 +37,6 @@ public class JobPosition extends BaseEntity {
     @JoinColumn(name = "term_id", nullable = true)
     private InternshipTerm term;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id", nullable = false)
-    private Department department;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default

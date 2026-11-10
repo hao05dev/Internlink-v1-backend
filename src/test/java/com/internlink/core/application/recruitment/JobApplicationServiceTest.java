@@ -105,14 +105,12 @@ class JobApplicationServiceTest {
             .code("HK1-2026-2027")
             .termName("Học kỳ 1 2026-2027")
             .status(TermStatus.ACTIVE)
-            .department(department)
             .build();
         term.setId(UUID.randomUUID());
 
         job = JobPosition.builder()
             .title("Java Backend Intern")
             .company(company)
-            .department(department)
             .term(term)
             .vacancies(5)
             .workFormat(WorkFormat.HYBRID)

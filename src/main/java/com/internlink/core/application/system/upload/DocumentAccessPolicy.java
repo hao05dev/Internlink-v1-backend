@@ -73,7 +73,7 @@ public class DocumentAccessPolicy {
                                                     || ResourceAuthorization.actsForSchool(actor)
                                                     || ResourceAuthorization.managesDepartment(
                                                             actor,
-                                                            app.getTerm().getDepartment().getId())
+                                                            com.internlink.core.shared.security.DepartmentScope.idOf(app))
                                                     || actor.getRole()
                                                                     == com.internlink.core.shared
                                                                             .enums.UserRole.LECTURER

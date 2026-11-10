@@ -70,13 +70,15 @@ class EvaluationServiceTest {
         TermEvaluationSummaryBuilder summaryBuilder = new TermEvaluationSummaryBuilder(
                 placementRepository, studentRosterRepository, studentProfileRepository,
                 finalResultRepository, portfolioFormRepository, componentScoreRepository, rubricRepository);
+        var termScope = new com.internlink.core.application.organization.TermDepartmentScope(
+                studentRosterRepository, placementRepository, org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class));
         FinalResultBatchPublisher batchPublisher = new FinalResultBatchPublisher(
-                termRepository, userRepository, placementRepository, finalResultRepository);
+                termRepository, userRepository, placementRepository, finalResultRepository, termScope);
 
         finalResultService = new FinalResultServiceImpl(
                 finalResultRepository, placementRepository, userRepository, termRepository,
                 securityGuard, finalResultMapper, readinessValidator, finalResultNotificationHelper,
-                summaryBuilder, batchPublisher);
+                summaryBuilder, batchPublisher, termScope);
 
         lenient().when(rubricRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(finalResultRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -193,7 +195,7 @@ class EvaluationServiceTest {
         company.setId(UUID.randomUUID());
         Department department = Department.builder().code(UUID.randomUUID().toString()).name("CNTT").contactEmail("it@example.com").build();
         department.setId(UUID.randomUUID());
-        InternshipTerm term = InternshipTerm.builder().department(department).code("T1").termName("Term").build();
+        InternshipTerm term = InternshipTerm.builder().code("T1").termName("Term").build();
         term.setId(UUID.randomUUID());
         LearningAgreement agreement = LearningAgreement.builder().student(student).company(company).department(department).targetCredits(10).learningObjectives("Objectives").build();
         agreement.setId(UUID.randomUUID());

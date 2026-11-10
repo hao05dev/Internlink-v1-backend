@@ -81,8 +81,9 @@ public class MediaAssetRepository {
         return referencedWhere(a, state + " AND " + contextColumn(a) + "=?", a.context());
     }
 
+    /** Bài viết thuộc khoa; tin tuyển dụng là cấp Trường nên không có tham chiếu theo khoa. */
     public boolean departmentReference(Asset a, UUID department) {
-        if (a.purpose().company()) return false;
+        if (a.purpose().company() || a.purpose().job()) return false;
         return referencedWhere(
                 a, "department_id=? AND " + contextColumn(a) + "=?", department, a.context());
     }

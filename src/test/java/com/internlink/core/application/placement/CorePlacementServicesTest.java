@@ -116,6 +116,7 @@ class CorePlacementServicesTest {
                         notificationHelper,
                         placementEligibility,
                         new PaginatedResponseMapper(),
+                        null,
                         null);
         LearningAgreement agreement =
                 LearningAgreement.builder().status(AgreementStatus.DRAFT).build();

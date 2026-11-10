@@ -32,7 +32,6 @@ class JobPositionWriteServiceTest extends RecruitmentTestFixture {
         representative.setCompany(company);
         when(companyRepository.findById(company.getId())).thenReturn(Optional.of(company));
         when(termRepository.findById(term.getId())).thenReturn(Optional.of(term));
-        when(departmentRepository.findById(department.getId())).thenReturn(Optional.of(department));
         when(userRepository.findById(representative.getId()))
                 .thenReturn(Optional.of(representative));
         when(securityGuard.currentUser()).thenReturn(CustomUserDetail.create(representative));
@@ -52,7 +51,6 @@ class JobPositionWriteServiceTest extends RecruitmentTestFixture {
         User blogManager = user(UserRole.SCHOOL_OFFICE);
         when(companyRepository.findById(company.getId())).thenReturn(Optional.of(company));
         when(termRepository.findById(term.getId())).thenReturn(Optional.of(term));
-        when(departmentRepository.findById(department.getId())).thenReturn(Optional.of(department));
         when(userRepository.findById(blogManager.getId()))
                 .thenReturn(Optional.of(blogManager));
         when(securityGuard.currentUser()).thenReturn(CustomUserDetail.create(blogManager));
@@ -63,27 +61,6 @@ class JobPositionWriteServiceTest extends RecruitmentTestFixture {
         assertThat(response.getStatus()).isEqualTo(JobStatus.APPROVED);
     }
 
-    @Test
-    void createJobRejectsDepartmentOutsideTerm() {
-        Department termDepartment = department();
-        Department otherDepartment = department();
-        InternshipTerm term = term(termDepartment);
-        Company company = company();
-        when(companyRepository.findById(company.getId())).thenReturn(Optional.of(company));
-        when(termRepository.findById(term.getId())).thenReturn(Optional.of(term));
-        when(departmentRepository.findById(otherDepartment.getId()))
-                .thenReturn(Optional.of(otherDepartment));
-
-        assertThatThrownBy(
-                        () ->
-                                jobService.createJob(
-                                        jobRequest(
-                                                company.getId(),
-                                                term.getId(),
-                                                otherDepartment.getId()),
-                                        UUID.randomUUID()))
-                .isInstanceOf(BadRequestException.class);
-    }
 
     @Test
     void representativeCannotCreateJobForAnotherCompany() {
@@ -95,7 +72,6 @@ class JobPositionWriteServiceTest extends RecruitmentTestFixture {
         when(companyRepository.findById(targetCompany.getId()))
                 .thenReturn(Optional.of(targetCompany));
         when(termRepository.findById(term.getId())).thenReturn(Optional.of(term));
-        when(departmentRepository.findById(department.getId())).thenReturn(Optional.of(department));
         when(userRepository.findById(representative.getId()))
                 .thenReturn(Optional.of(representative));
         when(securityGuard.currentUser()).thenReturn(CustomUserDetail.create(representative));

@@ -1,5 +1,6 @@
 package com.internlink.core.application.placement;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.placement.InternshipPlacement;
 import com.internlink.core.domain.placement.PlacementTask;
@@ -31,10 +32,7 @@ public final class PlacementTaskAccessPolicy {
             return placement.getLecturer() != null && actor.getId().equals(placement.getLecturer().getId());
         }
         if (actor.getRole() == UserRole.FACULTY_ADMIN) {
-            return actor.getDepartment() != null
-                    && placement.getTerm() != null
-                    && placement.getTerm().getDepartment() != null
-                    && actor.getDepartment().getId().equals(placement.getTerm().getDepartment().getId());
+            return DepartmentScope.sameDepartment(actor, DepartmentScope.idOf(placement));
         }
         return false;
     }

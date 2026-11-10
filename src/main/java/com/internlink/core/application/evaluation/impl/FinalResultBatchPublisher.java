@@ -1,5 +1,6 @@
 package com.internlink.core.application.evaluation.impl;
 
+import com.internlink.core.application.organization.TermDepartmentScope;
 import com.internlink.core.application.evaluation.FinalResultService;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.evaluation.FinalResult;
@@ -30,6 +31,7 @@ public class FinalResultBatchPublisher {
     private final JpaUserRepository userRepository;
     private final JpaInternshipPlacementRepository placementRepository;
     private final JpaFinalResultRepository finalResultRepository;
+    private final TermDepartmentScope termScope;
 
     public BatchPublishResultResponse publishBatchResults(
         UUID termId,
@@ -44,17 +46,11 @@ public class FinalResultBatchPublisher {
         User admin = userRepository.findById(facultyAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", facultyAdminId));
 
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            admin, term.getDepartment().getId()));
-
-        List<InternshipPlacement> targetPlacements;
+        // GVHD công bố cho SV mình hướng dẫn; Quản lý Khoa công bố cho SV thuộc khoa.
+        List<InternshipPlacement> targetPlacements = termScope.gradablePlacements(termId, admin);
         if (request != null && request.getPlacementIds() != null && !request.getPlacementIds().isEmpty()) {
             Set<UUID> targetIds = new HashSet<>(request.getPlacementIds());
-            targetPlacements = placementRepository.findByTermId(termId).stream()
-                .filter(p -> targetIds.contains(p.getId()))
-                .toList();
-        } else {
-            targetPlacements = placementRepository.findByTermId(termId);
+            targetPlacements = targetPlacements.stream().filter(p -> targetIds.contains(p.getId())).toList();
         }
 
         int publishedCount = 0;

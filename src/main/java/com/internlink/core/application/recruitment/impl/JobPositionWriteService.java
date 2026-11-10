@@ -2,7 +2,6 @@ package com.internlink.core.application.recruitment.impl;
 
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.company.Company;
-import com.internlink.core.domain.organization.Department;
 import com.internlink.core.domain.organization.InternshipTerm;
 import com.internlink.core.domain.recruitment.JobPosition;
 import com.internlink.core.infrastructure.persistence.jpa.*;
@@ -33,7 +32,6 @@ public class JobPositionWriteService {
     private final JpaJobPositionRepository jobPositionRepository;
     private final JpaCompanyRepository companyRepository;
     private final JpaInternshipTermRepository termRepository;
-    private final JpaDepartmentRepository departmentRepository;
     private final JpaUserRepository userRepository;
     private final JpaJobSkillRepository jobSkillRepository;
     private final SecurityGuard securityGuard;
@@ -67,17 +65,6 @@ public class JobPositionWriteService {
             throw new BadRequestException("Vị trí thực tập (INTERNSHIP) bắt buộc phải gắn với một kỳ thực tập");
         }
 
-        Department department =
-                departmentRepository
-                        .findById(request.getDepartmentId())
-                        .orElseThrow(
-                                () ->
-                                        new ResourceNotFoundException(
-                                                "Department", "id", request.getDepartmentId()));
-
-        if (term != null && !term.getDepartment().getId().equals(department.getId())) {
-            throw new BadRequestException("Khoa thẩm định phải trùng với khoa quản lý kỳ thực tập");
-        }
 
         User createdBy =
                 userRepository
@@ -105,7 +92,6 @@ public class JobPositionWriteService {
                         .company(company)
                         .jobType(jobType)
                         .term(term)
-                        .department(department)
                         .title(request.getTitle().trim())
                         .workFormat(request.getWorkFormat())
                         .location("")
@@ -169,10 +155,9 @@ public class JobPositionWriteService {
                 || (job.getTerm() != null && !job.getTerm().getId().equals(request.getTermId()));
 
         if (!job.getCompany().getId().equals(request.getCompanyId())
-                || termMismatch
-                || !job.getDepartment().getId().equals(request.getDepartmentId())) {
+                || termMismatch) {
             throw new BadRequestException(
-                    "Không thể đổi doanh nghiệp, kỳ hoặc khoa của vị trí đã tạo");
+                    "Không thể đổi doanh nghiệp hoặc kỳ của vị trí đã tạo");
         }
 
         media.job(

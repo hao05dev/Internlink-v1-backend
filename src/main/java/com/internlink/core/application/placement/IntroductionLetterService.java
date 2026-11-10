@@ -1,4 +1,6 @@
 package com.internlink.core.application.placement;
+import com.internlink.core.shared.security.DepartmentScope;
+import com.internlink.core.application.organization.TermDepartmentScope;
 import com.internlink.core.application.system.NotificationService;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.StudentRoster;
@@ -35,6 +37,7 @@ public class IntroductionLetterService {
     private final JpaUserRepository users;
     private final SecurityGuard security;
     private final NotificationService notifications;
+    private final TermDepartmentScope termScope;
     private final IntroductionLetterResponseMapper responseMapper = new IntroductionLetterResponseMapper();
     @Transactional
     public IntroductionLetterResponse create(CreateIntroductionLetterRequest request) {
@@ -210,17 +213,14 @@ public class IntroductionLetterService {
     @Transactional(readOnly = true)
     public List<IntroductionLetterResponse> byTerm(UUID termId) {
         User user = actor();
-        var term = terms.findById(termId)
+        terms.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
-        UUID departmentId = term.getDepartment().getId();
-        // VP Trường xử lý toàn trường; Khoa và GV chỉ theo dõi danh sách của khoa mình.
+        // VP Trường xử lý toàn trường; Khoa và GV chỉ theo dõi danh sách SV thuộc khoa mình.
         ResourceAuthorization.require(
                 ResourceAuthorization.actsForSchool(user)
-                        || ResourceAuthorization.managesDepartment(user, departmentId)
-                        || (user.getRole() == UserRole.LECTURER
-                                && user.getDepartment() != null
-                                && user.getDepartment().getId().equals(departmentId)));
-        List<StudentRoster> termRosters = rosters.findByTermIdOrderByStudentCodeAsc(termId);
+                        || ResourceAuthorization.worksOnTerm(user)
+                        || (user.getRole() == UserRole.LECTURER && user.getDepartment() != null));
+        List<StudentRoster> termRosters = termScope.rostersOrdered(termId, user);
         if (!termRosters.isEmpty()) {
             Map<UUID, IntroductionLetterRequest> requestByStudentId = letterRequests.findByTermIdOrderByCreatedAtDesc(termId)
                     .stream()
@@ -235,8 +235,11 @@ public class IntroductionLetterService {
                     })
                     .toList();
         }
+        UUID scopeDepartment = termScope.restrictTo(user);
         return letterRequests.findByTermIdOrderByCreatedAtDesc(termId)
                 .stream()
+                .filter(item -> scopeDepartment == null
+                        || scopeDepartment.equals(DepartmentScope.idOfStudent(item.getStudent())))
                 .map(item -> {
                     var roster = rosters.findByTermIdAndClaimedUserId(item.getTerm().getId(), item.getStudent().getId());
                     return responseMapper.fromRequest(item, roster.map(StudentRoster::getStudentCode).orElse(null));

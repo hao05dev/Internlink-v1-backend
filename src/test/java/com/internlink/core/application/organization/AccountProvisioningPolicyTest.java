@@ -43,8 +43,9 @@ class AccountProvisioningPolicyTest {
                 mock(JpaStudentProfileRepository.class), tokens);
         var department = Department.builder().name("IT").build();
         department.setId(UUID.randomUUID());
-        var term = InternshipTerm.builder().department(department).termName("HK1").build();
-        var roster = StudentRoster.builder().term(term).officialEmail("sv@example.test")
+        var term = InternshipTerm.builder().termName("HK1").build();
+        var roster = StudentRoster.builder().term(term)
+                .program(com.internlink.core.domain.organization.AcademicProgram.builder().department(department).build()).officialEmail("sv@example.test")
                 .fullName("SV").studentCode("B1").build();
         var student = User.builder().role(UserRole.STUDENT).department(department).email("sv@example.test").build();
         student.setId(UUID.randomUUID());

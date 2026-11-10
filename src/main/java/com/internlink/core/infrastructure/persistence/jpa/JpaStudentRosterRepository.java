@@ -17,6 +17,9 @@ public interface JpaStudentRosterRepository extends JpaRepository<StudentRoster,
     Optional<StudentRoster> findByTermIdAndStudentCode(UUID termId, String studentCode);
     Optional<StudentRoster> findByTermIdAndOfficialEmail(UUID termId, String officialEmail);
     List<StudentRoster> findByTermId(UUID termId);
+    /** Phần danh sách học phần của một khoa trong kỳ cấp Trường (khoa = khoa quản lý ngành). */
+    List<StudentRoster> findByTermIdAndProgramDepartmentId(UUID termId, UUID departmentId);
+    List<StudentRoster> findByTermIdAndProgramDepartmentIdOrderByStudentCodeAsc(UUID termId, UUID departmentId);
     List<StudentRoster> findByTermIdOrderByStudentCodeAsc(UUID termId);
     boolean existsByTermIdAndStudentCode(UUID termId, String studentCode);
     boolean existsByProgram_Id(UUID programId);
@@ -39,16 +42,15 @@ public interface JpaStudentRosterRepository extends JpaRepository<StudentRoster,
     @Modifying
     @Query("UPDATE StudentRoster r SET r.assignedLecturer = :lecturer "
             + "WHERE r.assignedLecturer IS NULL AND LOWER(r.lecturerEmail) = LOWER(:email) "
-            + "AND r.term.id IN (SELECT t.id FROM InternshipTerm t WHERE t.department.id = :departmentId)")
+            + "AND r.program.department.id = :departmentId")
     int linkUnassignedByLecturerEmail(@Param("lecturer") com.internlink.core.domain.auth.User lecturer,
                                       @Param("email") String email,
                                       @Param("departmentId") UUID departmentId);
 
-    /** Dòng roster của các MSSV này ở những kỳ khác cùng khoa, dùng để nhận ra sinh viên thực tập lại. */
+    /** Dòng roster của các MSSV này ở những kỳ khác (MSSV duy nhất toàn Trường), để nhận ra SV thực tập lại. */
     @Query("SELECT r FROM StudentRoster r JOIN FETCH r.term t LEFT JOIN FETCH r.claimedUser "
-            + "WHERE r.studentCode IN :codes AND t.department.id = :departmentId AND t.id <> :termId")
+            + "WHERE r.studentCode IN :codes AND t.id <> :termId")
     List<StudentRoster> findInOtherTermsByStudentCodes(@Param("codes") java.util.Collection<String> codes,
-                                                       @Param("departmentId") UUID departmentId,
                                                        @Param("termId") UUID termId);
 
     Optional<StudentRoster> findFirstByClaimedUserIdOrderByCreatedAtDesc(UUID userId);

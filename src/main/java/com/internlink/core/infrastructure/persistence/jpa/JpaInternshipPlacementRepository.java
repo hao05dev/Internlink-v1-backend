@@ -47,7 +47,13 @@ public interface JpaInternshipPlacementRepository extends JpaRepository<Internsh
     Page<InternshipPlacement> findByTermId(UUID termId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"student", "company", "mentor", "lecturer", "term", "assessmentScheme"})
-    List<InternshipPlacement> findByTermDepartmentId(UUID departmentId);
+    List<InternshipPlacement> findByStudentDepartmentId(UUID departmentId);
+
+    @EntityGraph(attributePaths = {"student", "company", "mentor", "lecturer", "term", "assessmentScheme"})
+    List<InternshipPlacement> findByTermIdAndStudentDepartmentId(UUID termId, UUID departmentId);
+
+    @EntityGraph(attributePaths = {"student", "company", "mentor", "lecturer", "term", "assessmentScheme"})
+    Page<InternshipPlacement> findByTermIdAndStudentDepartmentId(UUID termId, UUID departmentId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"student", "company", "mentor", "lecturer", "term", "assessmentScheme"})
     List<InternshipPlacement> findByTermIdAndStudentId(UUID termId, UUID studentId);

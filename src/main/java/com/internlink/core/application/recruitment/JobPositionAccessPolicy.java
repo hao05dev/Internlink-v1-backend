@@ -32,7 +32,7 @@ public class JobPositionAccessPolicy {
         return job.getStatus() == JobStatus.APPROVED
                 || ResourceAuthorization.isAdmin(actor)
                 || actor.getRole() == UserRole.SCHOOL_OFFICE
-                || ResourceAuthorization.managesDepartment(actor, job.getDepartment().getId())
+                || ResourceAuthorization.isFacultyAdmin(actor)
                 || ResourceAuthorization.representsCompany(actor, job.getCompany().getId());
     }
 }

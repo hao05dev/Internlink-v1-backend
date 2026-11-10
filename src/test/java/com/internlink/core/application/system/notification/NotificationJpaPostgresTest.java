@@ -83,7 +83,7 @@ class NotificationJpaPostgresTest {
                         "LECTURERS",
                         "COMPANY_REPS",
                         "FACULTY_ADMINS",
-                        "ADMINS")) assertThat(campaigns.audience(term, audience)).isNotNull();
+                        "ADMINS")) assertThat(campaigns.audience(term, audience, null)).isNotNull();
         assertThat(tickets.referenced("internlink/missing.pdf")).isFalse();
         assertThat(tickets.failures()).isEmpty();
     }

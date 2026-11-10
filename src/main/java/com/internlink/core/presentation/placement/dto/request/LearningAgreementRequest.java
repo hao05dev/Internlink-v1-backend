@@ -19,7 +19,7 @@ public class LearningAgreementRequest {
     @NotNull(message = "Offer không được để trống")
     private UUID offerId;
 
-    @NotNull(message = "Khoa quản lý không được để trống")
+    /** Không còn bắt buộc: khoa của thỏa thuận luôn là khoa của sinh viên. */
     private UUID departmentId;
 
     @NotNull(message = "Số tín chỉ thực tập không được để trống")

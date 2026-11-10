@@ -1,5 +1,7 @@
 package com.internlink.core.application.organization.impl;
 
+import com.internlink.core.application.organization.TermDepartmentScope;
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.domain.placement.InternshipDurationRule;
 import com.internlink.core.application.organization.StudentRosterService;
 import com.internlink.core.application.system.AuditLogService;
@@ -44,6 +46,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
     private final StudentRosterMapper mapper;
     private final StudentRosterAccountProvisioner accountProvisioner;
     private final RosterAttemptHistoryResolver attemptHistory;
+    private final TermDepartmentScope termScope;
 
     @Override
     @Transactional(readOnly = true)
@@ -51,12 +54,9 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         InternshipTerm term = termRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor, term.getDepartment().getId())
-                        || (actor.getRole() == UserRole.LECTURER
-                        && actor.getDepartment() != null
-                        && actor.getDepartment().getId().equals(term.getDepartment().getId())));
-        List<StudentRoster> rosters = rosterRepository.findByTermId(termId);
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor)
+                || (actor.getRole() == UserRole.LECTURER && actor.getDepartment() != null));
+        List<StudentRoster> rosters = termScope.rosters(termId, actor);
         return withAttemptHistory(term, rosters);
     }
 
@@ -66,10 +66,8 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         InternshipTerm term = termRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(
-                        userRepository.findById(securityGuard.currentUser().getId()).orElseThrow(),
-                        term.getDepartment().getId()));
+        var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
 
         if (items.isEmpty()) {
             throw new BadRequestException("Danh sách import trống");
@@ -82,8 +80,9 @@ public class StudentRosterServiceImpl implements StudentRosterService {
             AcademicProgram program = programRepository.findById(item.getProgramId())
                     .orElseThrow(() -> new ResourceNotFoundException("AcademicProgram", "id", item.getProgramId()));
 
-            if (!program.getDepartment().getId().equals(term.getDepartment().getId())) {
-                throw new BadRequestException("Ngành học không thuộc khoa quản lý kỳ thực tập");
+            // Khoa chỉ import sinh viên thuộc ngành của khoa mình.
+            if (!ResourceAuthorization.managesDepartment(actor, program.getDepartment().getId())) {
+                throw new BadRequestException("Ngành " + program.getCode() + " không thuộc khoa của bạn");
             }
 
             String cleanStudentCode = sanitizeString(item.getStudentCode()).toUpperCase();
@@ -148,7 +147,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         TermGuard.requireNotClosed(roster.getTerm());
         var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
         ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor, roster.getTerm().getDepartment().getId()));
+                ResourceAuthorization.managesDepartment(actor, DepartmentScope.idOf(roster)));
 
         return accountProvisioner.provisionSingleAccount(roster, mapper);
     }
@@ -160,10 +159,10 @@ public class StudentRosterServiceImpl implements StudentRosterService {
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
         var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor, term.getDepartment().getId()));
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
 
-        return accountProvisioner.batchProvisionEligible(term, actor.getId(), rosterIds);
+        return accountProvisioner.batchProvisionEligible(
+                term, actor.getId(), termScope.rosters(termId, actor), rosterIds);
     }
 
     @Override

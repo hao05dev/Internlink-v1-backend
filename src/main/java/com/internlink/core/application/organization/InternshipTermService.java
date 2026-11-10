@@ -10,7 +10,6 @@ import java.util.UUID;
 public interface InternshipTermService {
     List<InternshipTermResponse> getAllTerms();
     List<InternshipTermResponse> getActiveTerms();
-    List<InternshipTermResponse> getTermsByDepartment(UUID departmentId);
     InternshipTermResponse getTermById(UUID id);
     InternshipTermResponse createTerm(InternshipTermRequest request);
     InternshipTermResponse updateTermStatus(UUID termId, TermStatus newStatus);

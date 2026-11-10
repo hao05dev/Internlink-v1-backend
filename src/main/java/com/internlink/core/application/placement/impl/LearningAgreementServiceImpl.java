@@ -9,7 +9,6 @@ import com.internlink.core.domain.organization.Department;
 import com.internlink.core.domain.placement.LearningAgreement;
 import com.internlink.core.domain.recruitment.PlacementOffer;
 import com.internlink.core.domain.student.StudentProfile;
-import com.internlink.core.infrastructure.persistence.jpa.JpaDepartmentRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaLearningAgreementRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaPlacementOfferRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentProfileRepository;
@@ -41,7 +40,6 @@ public class LearningAgreementServiceImpl implements LearningAgreementService {
 
     private final JpaLearningAgreementRepository agreementRepository;
     private final JpaPlacementOfferRepository offerRepository;
-    private final JpaDepartmentRepository departmentRepository;
     private final JpaUserRepository userRepository;
     private final JpaStudentProfileRepository studentProfileRepository;
     private final PlacementEligibilityService placementEligibility;
@@ -114,14 +112,12 @@ public class LearningAgreementServiceImpl implements LearningAgreementService {
             placementEligibility.requireNoLivePlacement(studentId, term.getId());
         }
 
-        Department department = departmentRepository.findById(request.getDepartmentId())
-            .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
-
-        if (!offer.getApplication().getJob().getDepartment().getId().equals(department.getId())) {
-            throw new BadRequestException("Khoa của thỏa thuận phải trùng với khoa thẩm định vị trí thực tập");
-        }
-
         User student = offer.getApplication().getStudent();
+        // Khoa quản lý thỏa thuận = khoa của sinh viên (tin tuyển dụng là cấp Trường).
+        Department department = student.getDepartment();
+        if (department == null) {
+            throw new BadRequestException("Tài khoản sinh viên chưa gắn với khoa quản lý ngành");
+        }
 
         LearningAgreement agreement = LearningAgreement.builder()
             .offer(offer)
@@ -197,7 +193,7 @@ public class LearningAgreementServiceImpl implements LearningAgreementService {
             }
             case FACULTY_ADMIN, ADMIN -> {
                 ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-                    currentActor(), agreement.getDepartment().getId()));
+                    currentActor(), com.internlink.core.shared.security.DepartmentScope.id(agreement.getDepartment())));
                 agreement.setFacultySignature(signatureData);
             }
             default -> throw new ForbiddenException(

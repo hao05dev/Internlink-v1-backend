@@ -1,5 +1,6 @@
 package com.internlink.core.application.placement.impl;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.application.placement.AcceptanceFormGate;
 import com.internlink.core.application.placement.InternshipPlacementService;
 import com.internlink.core.application.placement.PlacementEligibilityService;
@@ -46,15 +47,16 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
     private final PlacementEligibilityService placementEligibility;
     private final com.internlink.core.shared.api.PaginatedResponseMapper paginatedResponseMapper;
     private final AcceptanceFormGate acceptanceFormGate;
+    private final com.internlink.core.application.organization.TermDepartmentScope termScope;
 
     @Override
     @Transactional(readOnly = true)
     public List<InternshipPlacementResponse> getPlacementsByTerm(UUID termId) {
-        var term = termRepository.findById(termId)
+        termRepository.findById(termId)
             .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            currentActor(), term.getDepartment().getId()));
-        return placementRepository.findByTermId(termId).stream()
+        User actor = currentActor();
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
+        return termScope.placements(termId, actor).stream()
             .map(placementMapper::toResponse)
             .toList();
     }
@@ -64,11 +66,14 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
     public com.internlink.core.shared.api.PageResponse<InternshipPlacementResponse> getPlacementsByTermPage(
             UUID termId, com.internlink.core.shared.api.PageParam pageParam
     ) {
-        var term = termRepository.findById(termId)
+        termRepository.findById(termId)
             .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            currentActor(), term.getDepartment().getId()));
-        org.springframework.data.domain.Page<InternshipPlacement> page = placementRepository.findByTermId(termId, pageParam.toPageable());
+        User actor = currentActor();
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
+        UUID departmentId = termScope.restrictTo(actor);
+        org.springframework.data.domain.Page<InternshipPlacement> page = departmentId == null
+            ? placementRepository.findByTermId(termId, pageParam.toPageable())
+            : placementRepository.findByTermIdAndStudentDepartmentId(termId, departmentId, pageParam.toPageable());
         return paginatedResponseMapper.toPageResponse(page, placementMapper::toResponse);
     }
 
@@ -197,14 +202,14 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
         TermGuard.requireNotClosed(placement.getTerm());
         User actor = currentActor();
         ResourceAuthorization.require(actor.getRole() == UserRole.FACULTY_ADMIN
-            && ResourceAuthorization.managesDepartment(actor, placement.getTerm().getDepartment().getId()));
+            && ResourceAuthorization.managesDepartment(actor, DepartmentScope.idOf(placement)));
         if (Set.of(PlacementStatus.COMPLETED, PlacementStatus.TERMINATED, PlacementStatus.TRANSFERRED)
             .contains(placement.getStatus())) {
             throw new BadRequestException("Không thể đổi GVHD cho lần thực tập đã kết thúc");
         }
         User lecturer = userRepository.findById(lecturerId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", lecturerId));
-        placementEligibility.requireActiveLecturer(lecturer, placement.getTerm().getDepartment().getId());
+        placementEligibility.requireActiveLecturer(lecturer, DepartmentScope.idOf(placement));
 
         UUID previousId = placement.getLecturer() != null ? placement.getLecturer().getId() : null;
         placement.setLecturer(lecturer);
@@ -222,7 +227,7 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
             .orElseThrow(() -> new ResourceNotFoundException("InternshipPlacement", "id", id));
         TermGuard.requireNotClosed(placement.getTerm());
         ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            currentActor(), placement.getTerm().getDepartment().getId()));
+            currentActor(), DepartmentScope.idOf(placement)));
 
         PlacementStatus currentStatus = placement.getStatus();
         transitionValidator.validateTransition(placement, newStatus);

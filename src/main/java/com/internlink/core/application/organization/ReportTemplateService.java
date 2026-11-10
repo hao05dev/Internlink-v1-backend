@@ -91,7 +91,7 @@ public class ReportTemplateService {
             .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         Department department = departmentId != null
             ? departmentRepository.findById(departmentId).orElse(null)
-            : term.getDepartment();
+            : uploader.getDepartment();
 
         AcademicProgram program = null;
         String resolvedProgramCode = programCode != null && !programCode.isBlank()
@@ -179,7 +179,7 @@ public class ReportTemplateService {
 
             ReportTemplateVersion inherited = ReportTemplateVersion.builder()
                 .term(targetTerm)
-                .department(src.getDepartment() != null ? src.getDepartment() : targetTerm.getDepartment())
+                .department(src.getDepartment())
                 .program(src.getProgram())
                 .programCode(src.getProgramCode() != null ? src.getProgramCode() : "DEFAULT")
                 .title(src.getTitle())

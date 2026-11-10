@@ -1,5 +1,6 @@
 package com.internlink.core.application.organization.impl;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.application.auth.AccountActivationTokenService;
 import com.internlink.core.application.system.AuditLogService;
 import com.internlink.core.domain.auth.User;
@@ -74,7 +75,7 @@ public class StudentRosterAccountProvisioner {
                 .phoneNumber(roster.getPhoneNumber())
                 .passwordHash(passwordEncoder.encode(bootstrapSecret))
                 .role(UserRole.STUDENT)
-                .department(roster.getTerm().getDepartment())
+                .department(DepartmentScope.of(roster))
                 .mustChangePassword(true)
                 .isActive(true)
                 .build();
@@ -95,8 +96,10 @@ public class StudentRosterAccountProvisioner {
         return mapper.mapToResponse(roster);
     }
 
-    public BatchProvisionResponse batchProvisionEligible(InternshipTerm term, UUID actorId, Collection<UUID> rosterIds) {
-        List<StudentRoster> withoutAccount = rosterRepository.findByTermId(term.getId()).stream()
+    /** {@code scoped}: dòng roster của kỳ trong phạm vi khoa của người thao tác. */
+    public BatchProvisionResponse batchProvisionEligible(
+            InternshipTerm term, UUID actorId, List<StudentRoster> scoped, Collection<UUID> rosterIds) {
+        List<StudentRoster> withoutAccount = scoped.stream()
                 .filter(RosterSelection.of(rosterIds))
                 .filter(r -> r.getClaimedUser() == null)
                 .toList();
@@ -140,7 +143,7 @@ public class StudentRosterAccountProvisioner {
                         .phoneNumber(roster.getPhoneNumber())
                         .passwordHash(passwordEncoder.encode(bootstrapSecret))
                         .role(UserRole.STUDENT)
-                        .department(term.getDepartment())
+                        .department(DepartmentScope.of(roster))
                         .mustChangePassword(true)
                         .isActive(true)
                         .build();
@@ -197,8 +200,13 @@ public class StudentRosterAccountProvisioner {
     }
 
     private void requireStudentInDepartment(User user, StudentRoster roster) {
-        if (user.getRole() != UserRole.STUDENT || user.getDepartment() == null
-                || !user.getDepartment().getId().equals(roster.getTerm().getDepartment().getId())) {
+        var department = DepartmentScope.of(roster);
+        if (user.getRole() == UserRole.STUDENT && user.getDepartment() == null && department != null) {
+            user.setDepartment(department);
+            return;
+        }
+        if (user.getRole() != UserRole.STUDENT || user.getDepartment() == null || department == null
+                || !user.getDepartment().getId().equals(department.getId())) {
             throw new BadRequestException("Email thuộc tài khoản khác vai trò hoặc khoa; liên hệ quản trị viên.");
         }
     }

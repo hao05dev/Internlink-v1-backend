@@ -1,5 +1,6 @@
 package com.internlink.core.application.placement;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.InternshipTerm;
 import com.internlink.core.domain.organization.StudentRoster;
@@ -105,7 +106,7 @@ public class StudentFoundApplicationService {
         var user = lookup.actor();
         ResourceAuthorization.require(user.getId().equals(app.getStudent().getId())
             || ResourceAuthorization.actsForSchool(user)
-            || ResourceAuthorization.managesDepartment(user, app.getTerm().getDepartment().getId())
+            || ResourceAuthorization.managesDepartment(user, DepartmentScope.idOf(app))
             || user.getRole() == UserRole.LECTURER && isSupervisedBy(app, user));
         return mapper.toResponse(app);
     }

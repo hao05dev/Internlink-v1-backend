@@ -23,7 +23,6 @@ public class RecommendationEligibilityService {
     private final JpaInternshipPlacementRepository placementRepository;
     private final JpaJobApplicationRepository applicationRepository;
     private final JpaPlacementOfferRepository offerRepository;
-    private final JpaStudentProfileRepository studentProfileRepository;
     private final JpaInternshipTermRepository termRepository;
 
     @Transactional(readOnly = true)
@@ -68,12 +67,7 @@ public class RecommendationEligibilityService {
             return EligibilityResult.ineligible("CAPACITY_FULL", "Vị trí đã đủ chỉ tiêu tuyển dụng");
         }
 
-        StudentProfile profile = studentProfileRepository.findByUserId(studentId).orElse(null);
-        if (profile != null && profile.getProgram() != null && profile.getProgram().getDepartment() != null && job.getDepartment() != null) {
-            if (!job.getDepartment().getId().equals(profile.getProgram().getDepartment().getId())) {
-                return EligibilityResult.ineligible("DEPARTMENT_MISMATCH", "Vị trí không thuộc chuyên khoa/ngành của sinh viên");
-            }
-        }
+        // Tin tuyển dụng là cấp Trường: SV mọi khoa đều được ứng tuyển.
 
         if (applicationRepository.existsByJobIdAndStudentId(job.getId(), studentId)) {
             return EligibilityResult.ineligible("ALREADY_APPLIED", "Sinh viên đã nộp hồ sơ ứng tuyển vị trí này");

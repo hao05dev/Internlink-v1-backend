@@ -63,7 +63,7 @@ public class RosterAttemptHistoryResolver {
         if (current.isEmpty()) return Map.of();
 
         List<StudentRoster> earlier = rosterRepository
-                .findInOtherTermsByStudentCodes(current.keySet(), term.getDepartment().getId(), term.getId())
+                .findInOtherTermsByStudentCodes(current.keySet(), term.getId())
                 .stream()
                 .filter(r -> isEarlier(r.getTerm(), term))
                 .sorted(Comparator.comparing(StudentRoster::getTerm, RosterAttemptHistoryResolver::compareTerms))

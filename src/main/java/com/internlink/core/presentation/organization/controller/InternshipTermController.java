@@ -32,7 +32,7 @@ public class InternshipTermController {
             List<UUID> rosterIds) {}
 
     @PostMapping("/{id}/introduction-letter-notice")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'FACULTY_ADMIN', 'ADMIN')")
     public ResponseEntity<ApiResponse<IntroductionLetterNoticeService.NoticeResult>> notifyIntroductionLetterPickup(
         @PathVariable UUID id, @RequestBody IntroductionLetterNoticeRequest request
     ) {
@@ -50,22 +50,15 @@ public class InternshipTermController {
         return ResponseEntity.ok(ApiResponse.success(termService.getActiveTerms()));
     }
 
-    @GetMapping("/by-department/{departmentId}")
-    public ResponseEntity<ApiResponse<List<InternshipTermResponse>>> getTermsByDepartment(
-            @PathVariable UUID departmentId
-    ) {
-        List<InternshipTermResponse> terms = termService.getTermsByDepartment(departmentId);
-        return ResponseEntity.ok(ApiResponse.success(terms));
-    }
-
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<InternshipTermResponse>> getTermById(@PathVariable UUID id) {
         InternshipTermResponse term = termService.getTermById(id);
         return ResponseEntity.ok(ApiResponse.success(term));
     }
 
+    /** Kỳ thực tập cấp Trường do Văn phòng Trường tạo và điều phối. */
     @PostMapping
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
     public ResponseEntity<ApiResponse<InternshipTermResponse>> createTerm(
             @Valid @RequestBody InternshipTermRequest request
     ) {
@@ -75,7 +68,7 @@ public class InternshipTermController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
     public ResponseEntity<ApiResponse<InternshipTermResponse>> updateTermStatus(
             @PathVariable UUID id,
             @RequestParam TermStatus status

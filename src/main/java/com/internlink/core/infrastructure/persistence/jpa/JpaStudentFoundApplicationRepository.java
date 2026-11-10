@@ -9,6 +9,8 @@ import java.util.UUID;
 
 public interface JpaStudentFoundApplicationRepository extends JpaRepository<StudentFoundApplication, UUID> {
     List<StudentFoundApplication> findByTermId(UUID termId);
+    List<StudentFoundApplication> findByTermIdAndStudentDepartmentId(UUID termId, UUID departmentId);
+    List<StudentFoundApplication> findByTermIdAndStatusAndStudentDepartmentId(UUID termId, String status, UUID departmentId);
     List<StudentFoundApplication> findByStudentId(UUID studentId);
     Optional<StudentFoundApplication> findByTermIdAndStudentId(UUID termId, UUID studentId);
     Optional<StudentFoundApplication> findByAgreementId(UUID agreementId);

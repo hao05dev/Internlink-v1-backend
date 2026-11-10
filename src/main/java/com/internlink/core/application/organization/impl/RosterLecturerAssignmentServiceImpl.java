@@ -1,5 +1,7 @@
 package com.internlink.core.application.organization.impl;
 
+import com.internlink.core.application.organization.TermDepartmentScope;
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.application.organization.RosterLecturerAssignmentService;
 import com.internlink.core.application.placement.PlacementEligibilityService;
 import com.internlink.core.application.system.AuditLogService;
@@ -46,14 +48,14 @@ public class RosterLecturerAssignmentServiceImpl implements RosterLecturerAssign
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
     private final StudentRosterMapper mapper;
+    private final TermDepartmentScope termScope;
 
     @Override
     @Transactional
     public StudentRosterResponse assign(UUID rosterId, UUID lecturerId, String reason) {
         StudentRoster roster = loadRoster(rosterId);
-        InternshipTerm term = roster.getTerm();
-        UUID actorId = requireManager(term);
-        User lecturer = loadLecturer(lecturerId, term);
+        UUID actorId = requireManager(roster);
+        User lecturer = loadLecturer(lecturerId, DepartmentScope.idOf(roster));
         applyAssignment(roster, lecturer, reason, actorId);
         return mapper.mapToResponse(roster);
     }
@@ -66,14 +68,18 @@ public class RosterLecturerAssignmentServiceImpl implements RosterLecturerAssign
         }
         InternshipTerm term = termRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
-        UUID actorId = requireManager(term);
-        User lecturer = loadLecturer(lecturerId, term);
+        TermGuard.requireNotClosed(term);
+        User actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
+        UUID actorId = actor.getId();
+        // Khoa chỉ phân công GVHD của khoa mình cho SV của khoa mình.
+        User lecturer = loadLecturer(lecturerId, termScope.restrictTo(actor));
 
         Set<UUID> wanted = new HashSet<>(rosterIds);
         int updated = 0;
         int unchanged = 0;
         List<String> failures = new ArrayList<>();
-        for (StudentRoster roster : rosterRepository.findByTermIdOrderByStudentCodeAsc(termId)) {
+        for (StudentRoster roster : termScope.rostersOrdered(termId, actor)) {
             if (!wanted.remove(roster.getId())) continue;
             try {
                 if (applyAssignment(roster, lecturer, reason, actorId)) updated++;
@@ -83,7 +89,7 @@ public class RosterLecturerAssignmentServiceImpl implements RosterLecturerAssign
             }
         }
         if (!wanted.isEmpty()) {
-            failures.add(wanted.size() + " dòng không thuộc học kỳ này");
+            failures.add(wanted.size() + " dòng không thuộc học kỳ này hoặc không thuộc khoa của bạn");
         }
         return new BulkRosterLecturerResponse(updated, unchanged, failures);
     }
@@ -92,7 +98,7 @@ public class RosterLecturerAssignmentServiceImpl implements RosterLecturerAssign
     @Transactional
     public StudentRosterResponse unassign(UUID rosterId) {
         StudentRoster roster = loadRoster(rosterId);
-        UUID actorId = requireManager(roster.getTerm());
+        UUID actorId = requireManager(roster);
         if (livePlacement(roster).isPresent()) {
             throw new BadRequestException("Sinh viên đang có lần thực tập, hãy đổi sang GVHD khác thay vì gỡ phân công");
         }
@@ -193,20 +199,20 @@ public class RosterLecturerAssignmentServiceImpl implements RosterLecturerAssign
                 .orElseThrow(() -> new ResourceNotFoundException("StudentRoster", "id", rosterId));
     }
 
-    private UUID requireManager(InternshipTerm term) {
-        TermGuard.requireNotClosed(term);
+    private UUID requireManager(StudentRoster roster) {
+        TermGuard.requireNotClosed(roster.getTerm());
         User actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(actor, term.getDepartment().getId()));
+        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(actor, DepartmentScope.idOf(roster)));
         return actor.getId();
     }
 
-    private User loadLecturer(UUID lecturerId, InternshipTerm term) {
+    private User loadLecturer(UUID lecturerId, UUID departmentId) {
         if (lecturerId == null) {
             throw new BadRequestException("Cần chọn giảng viên hướng dẫn");
         }
         User lecturer = userRepository.findById(lecturerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", lecturerId));
-        eligibilityService.requireActiveLecturer(lecturer, term.getDepartment().getId());
+        eligibilityService.requireActiveLecturer(lecturer, departmentId);
         return lecturer;
     }
 }

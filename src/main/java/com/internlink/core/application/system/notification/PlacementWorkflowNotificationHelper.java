@@ -1,5 +1,6 @@
 package com.internlink.core.application.system.notification;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.application.system.NotificationService;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.evaluation.AssessmentScheme;
@@ -69,10 +70,8 @@ public class PlacementWorkflowNotificationHelper {
     public void changed(InternshipPlacement p, UUID actor, String type, String title) {
         for (var user : Arrays.asList(p.getStudent(), p.getMentor(), p.getLecturer()))
             send(user, actor, type, title, "Hãy kiểm tra hồ sơ và hạn xử lý mới.");
-        if (p.getTerm() != null && p.getTerm().getDepartment() != null)
-            for (var user :
-                    users.findByDepartmentIdAndRole(
-                            p.getTerm().getDepartment().getId(), UserRole.FACULTY_ADMIN))
+        if (DepartmentScope.idOf(p) != null)
+            for (var user : users.findByDepartmentIdAndRole(DepartmentScope.idOf(p), UserRole.FACULTY_ADMIN))
                 send(user, actor, type, title, "Hồ sơ thuộc khoa có cập nhật cần theo dõi.");
     }
 
@@ -89,7 +88,7 @@ public class PlacementWorkflowNotificationHelper {
                             "Hãy xem cấu hình đánh giá của kỳ thực tập.");
         for (var user :
                 users.findByDepartmentIdAndRole(
-                        scheme.getTerm().getDepartment().getId(), UserRole.FACULTY_ADMIN))
+                        scheme.getProgram().getDepartment().getId(), UserRole.FACULTY_ADMIN))
             send(
                     user,
                     actor,

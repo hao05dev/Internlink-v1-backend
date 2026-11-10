@@ -63,7 +63,8 @@ class StudentFoundApplicationServiceTest {
             agreements, lookup, mapper, notifier);
         officeService = new AcceptanceFormOfficeService(applications, lookup, mapper, notifier);
         reviewService = new AcceptanceFormReviewService(applications, placements, rosters, terms, users,
-            eligibility, placementService, lookup, mapper, notifier);
+            eligibility, placementService, lookup, mapper, notifier,
+            new com.internlink.core.application.organization.TermDepartmentScope(rosters, placements, applications));
 
         department = Department.builder().code("CICT").name("CNTT&TT").build();
         department.setId(UUID.randomUUID());
@@ -71,7 +72,7 @@ class StudentFoundApplicationServiceTest {
         facultyAdmin = user(UserRole.FACULTY_ADMIN, department);
         schoolOffice = user(UserRole.SCHOOL_OFFICE, null);
         lecturer = user(UserRole.LECTURER, department);
-        term = InternshipTerm.builder().department(department).status(TermStatus.APPLICATION_OPEN).termName("HK1")
+        term = InternshipTerm.builder().status(TermStatus.APPLICATION_OPEN).termName("HK1")
             .startDate(LocalDate.of(2026, 9, 7)).endDate(LocalDate.of(2026, 12, 31)).build();
         term.setId(UUID.randomUUID());
         roster = StudentRoster.builder().term(term).claimedUser(student).assignedLecturer(lecturer)
@@ -118,7 +119,7 @@ class StudentFoundApplicationServiceTest {
             .isInstanceOf(BadRequestException.class);
 
         actAs(facultyAdmin);
-        when(applications.findByTermIdAndStatus(term.getId(), AcceptanceFormStatus.APPROVED)).thenReturn(List.of(app));
+        when(applications.findByTermIdAndStatusAndStudentDepartmentId(term.getId(), AcceptanceFormStatus.APPROVED, department.getId())).thenReturn(List.of(app));
         assertThat(reviewService.publish(term.getId())).isEqualTo(1);
         assertThat(app.getStatus()).isEqualTo(AcceptanceFormStatus.PUBLISHED);
 

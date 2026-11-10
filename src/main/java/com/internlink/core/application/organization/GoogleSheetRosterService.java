@@ -44,7 +44,7 @@ public class GoogleSheetRosterService {
         var term = terms.findById(termId).orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
         var actor = users.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(actor, term.getDepartment().getId()));
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
         if (spreadsheetId == null || !spreadsheetId.matches("[A-Za-z0-9_-]{20,}"))
             throw new BadRequestException("Spreadsheet ID không hợp lệ");
         if (range == null || range.isBlank() || range.length() > 100)

@@ -103,7 +103,7 @@ public class PortfolioService {
                     case FACULTY_ADMIN ->
                             a.getDepartment() == null
                                     ? List.of()
-                                    : placements.findByTermDepartmentId(a.getDepartment().getId());
+                                    : placements.findByStudentDepartmentId(a.getDepartment().getId());
                     default -> List.of();
                 };
         return list.stream()

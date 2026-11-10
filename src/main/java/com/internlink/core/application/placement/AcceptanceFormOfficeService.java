@@ -5,6 +5,7 @@ import com.internlink.core.domain.placement.StudentFoundApplication;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository;
 import com.internlink.core.presentation.placement.dto.response.StudentFoundResponse;
 import com.internlink.core.shared.exception.BadRequestException;
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.shared.security.ResourceAuthorization;
 import com.internlink.core.shared.security.TermGuard;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,7 @@ public class AcceptanceFormOfficeService {
     private final AcceptanceFormNotifier notifier;
 
     @Transactional(readOnly = true)
-    public List<StudentFoundResponse> intake(UUID termId, String status) {
+    public List<StudentFoundResponse> intake(UUID termId, String status, UUID departmentId) {
         ResourceAuthorization.require(ResourceAuthorization.actsForSchool(lookup.actor()));
         if (status != null && !OFFICE_VISIBLE.contains(status))
             throw new BadRequestException("Trạng thái lọc không hợp lệ");
@@ -43,6 +44,7 @@ public class AcceptanceFormOfficeService {
         return source.stream()
             .filter(a -> OFFICE_VISIBLE.contains(a.getStatus()))
             .filter(a -> status == null || status.equals(a.getStatus()))
+            .filter(a -> departmentId == null || departmentId.equals(DepartmentScope.idOf(a)))
             .sorted(Comparator.comparing(StudentFoundApplication::getUpdatedAt,
                 Comparator.nullsLast(Comparator.reverseOrder())))
             .map(mapper::toResponse)

@@ -19,8 +19,6 @@ import java.util.UUID;
 public class InternshipTermResponse {
 
     private UUID id;
-    private UUID departmentId;
-    private String departmentName;
     private String code;
     private String termName;
     private String academicYear;

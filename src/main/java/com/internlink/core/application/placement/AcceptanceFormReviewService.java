@@ -1,5 +1,6 @@
 package com.internlink.core.application.placement;
 
+import com.internlink.core.application.organization.TermDepartmentScope;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.StudentRoster;
 import com.internlink.core.domain.placement.*;
@@ -37,13 +38,14 @@ public class AcceptanceFormReviewService {
     private final AcceptanceFormLookup lookup;
     private final AcceptanceFormMapper mapper;
     private final AcceptanceFormNotifier notifier;
+    private final TermDepartmentScope termScope;
 
     @Transactional
     public StudentFoundResponse review(UUID id, String decision, String note, UUID lecturerId) {
         var app = lookup.get(id);
         TermGuard.requireNotClosed(app.getTerm());
         var reviewer = lookup.actor();
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(reviewer, app.getTerm().getDepartment().getId()));
+        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(reviewer, DepartmentScope.idOf(app)));
         AcceptanceFormLookup.requireStatus(app, AcceptanceFormStatus.RECEIVED,
             "Khoa chỉ duyệt phiếu đã được Văn phòng Trường xác nhận bản giấy");
         if (!DECISIONS.contains(decision)) throw new BadRequestException("Quyết định không hợp lệ");
@@ -75,8 +77,9 @@ public class AcceptanceFormReviewService {
         var term = terms.findById(termId).orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
         var publisher = lookup.actor();
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(publisher, term.getDepartment().getId()));
-        var approved = applications.findByTermIdAndStatus(termId, AcceptanceFormStatus.APPROVED);
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(publisher));
+        // Mỗi Khoa công bố danh sách SV thuộc khoa mình trong kỳ cấp Trường.
+        var approved = termScope.applicationsWithStatus(termId, AcceptanceFormStatus.APPROVED, publisher);
         if (approved.isEmpty()) throw new BadRequestException("Không có phiếu đã duyệt nào chờ công bố");
         var now = OffsetDateTime.now();
         for (var app : approved) {
@@ -86,17 +89,16 @@ public class AcceptanceFormReviewService {
             notifier.published(app);
         }
         applications.saveAll(approved);
-        notifier.listPublished(term, approved.size());
+        notifier.listPublished(term, publisher, approved.size());
         return approved.size();
     }
 
     @Transactional(readOnly = true)
-    public List<StudentFoundResponse> byTerm(UUID termId) {
-        var term = terms.findById(termId).orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
+    public List<StudentFoundResponse> byTerm(UUID termId, UUID departmentId) {
+        terms.findById(termId).orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         var actor = lookup.actor();
-        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(actor)
-            || ResourceAuthorization.managesDepartment(actor, term.getDepartment().getId()));
-        return applications.findByTermId(termId).stream().map(mapper::toResponse).toList();
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(actor) || ResourceAuthorization.worksOnTerm(actor));
+        return termScope.applications(termId, actor, departmentId).stream().map(mapper::toResponse).toList();
     }
 
     /** Nhắc SV trong danh sách học phần chưa nộp Phiếu tiếp nhận. */
@@ -104,9 +106,10 @@ public class AcceptanceFormReviewService {
     public int remindStudentsWithoutForm(UUID termId) {
         var term = terms.findById(termId).orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(lookup.actor(), term.getDepartment().getId()));
+        var actor = lookup.actor();
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
         int count = 0;
-        for (StudentRoster roster : rosters.findByTermId(termId)) {
+        for (StudentRoster roster : termScope.rosters(termId, actor)) {
             if (roster.getClaimedUser() == null) continue;
             UUID studentId = roster.getClaimedUser().getId();
             if (!placements.findByTermIdAndStudentId(termId, studentId).isEmpty()) continue;
@@ -131,7 +134,7 @@ public class AcceptanceFormReviewService {
         var chosen = lecturerId == null ? null
             : users.findById(lecturerId).orElseThrow(() -> new ResourceNotFoundException("User", "id", lecturerId));
         var lecturer = placementEligibility.resolveLecturer(chosen, roster);
-        placementEligibility.requireActiveLecturer(lecturer, app.getTerm().getDepartment().getId());
+        placementEligibility.requireActiveLecturer(lecturer, DepartmentScope.idOf(app));
         placementEligibility.syncRosterLecturer(app.getStudent().getId(), app.getTerm().getId(), lecturer);
         placements.save(InternshipPlacement.builder().studentFoundApplication(app).source("STUDENT_FOUND")
             .student(app.getStudent()).lecturer(lecturer).term(app.getTerm())

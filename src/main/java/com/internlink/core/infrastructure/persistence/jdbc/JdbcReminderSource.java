@@ -18,10 +18,10 @@ public class JdbcReminderSource implements ReminderSource {
     private static final String SOURCES =
             """
 WITH placements AS (
-    SELECT p.*,t.department_id,t.evaluation_deadline,t.status AS term_status,
+    SELECT p.*,st.department_id,t.evaluation_deadline,t.status AS term_status,
         coalesce(internlink_try_timestamp(p.work_schedule #>> '{extension,reportDueAt}'),s.final_report_due_at,t.evaluation_deadline) AS report_due,
         coalesce(s.weekly_grace_days,0) AS grace_days, s.midterm_report_due_at, coalesce(s.require_midterm_report,false) AS require_midterm_report
-    FROM internship_placements p JOIN internship_terms t ON t.id=p.term_id
+    FROM internship_placements p JOIN internship_terms t ON t.id=p.term_id JOIN users st ON st.id=p.student_id
     LEFT JOIN assessment_schemes s ON s.id=p.assessment_scheme_id
     WHERE t.status NOT IN ('DRAFT','CLOSED') AND p.status IN ('PREPARING','ACTIVE','PAUSED','COMPLETED')
 ), due AS (
@@ -117,8 +117,8 @@ WITH placements AS (
     JOIN internship_terms t ON t.id=j.term_id JOIN users u ON u.company_id=j.company_id AND u.role='COMPANY_REP'
     WHERE a.status IN ('SUBMITTED','REVIEWING') AND t.status NOT IN ('DRAFT','CLOSED')
     UNION ALL
-    SELECT u.id,j.id::text,'JOB_REVIEW_REMINDER','Tin thực tập chờ khoa duyệt','/faculty/job-approvals',j.updated_at+INTERVAL '3 days'
-    FROM job_positions j JOIN internship_terms t ON t.id=j.term_id JOIN users u ON u.department_id=j.department_id AND u.role='FACULTY_ADMIN'
+    SELECT u.id,j.id::text,'JOB_REVIEW_REMINDER','Tin thực tập chờ Văn phòng Trường duyệt','/school-office/job-approvals',j.updated_at+INTERVAL '3 days'
+    FROM job_positions j JOIN internship_terms t ON t.id=j.term_id JOIN users u ON u.role='SCHOOL_OFFICE' AND u.is_active
     WHERE j.status='PENDING_APPROVAL' AND t.status NOT IN ('DRAFT','CLOSED')
     UNION ALL
     SELECT u.id,p.id::text,'FINALIZATION_DEADLINE','Hồ sơ chờ tổng hợp kết quả','/faculty/evaluations',p.evaluation_deadline

@@ -1,5 +1,6 @@
 package com.internlink.core.application.placement;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.application.system.NotificationService;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.InternshipTerm;
@@ -34,7 +35,7 @@ public class AcceptanceFormNotifier {
     public void received(StudentFoundApplication app) {
         toStudent(app, "ACCEPTANCE_FORM_RECEIVED", "Văn phòng Trường đã nhận Phiếu tiếp nhận",
             "Phiếu tiếp nhận tại " + app.getHostName() + " đã được tiếp nhận và chuyển Khoa xét duyệt.");
-        var departmentId = app.getTerm().getDepartment().getId();
+        var departmentId = DepartmentScope.idOf(app);
         for (User admin : users.findByDepartmentIdAndRole(departmentId, UserRole.FACULTY_ADMIN)) {
             notifications.sendNotification(admin.getId(), "ACCEPTANCE_FORM_RECEIVED",
                 "Phiếu tiếp nhận chờ Khoa duyệt",
@@ -72,11 +73,12 @@ public class AcceptanceFormNotifier {
                 + ". Vui lòng đến Văn phòng Trường CNTT-TT nhận giấy tờ.");
     }
 
-    public void listPublished(InternshipTerm term, int count) {
+    public void listPublished(InternshipTerm term, User publisher, int count) {
+        String by = publisher.getDepartment() != null ? publisher.getDepartment().getName() : "Khoa";
         for (User office : users.findByRole(UserRole.SCHOOL_OFFICE)) {
             notifications.sendNotification(office.getId(), "ACCEPTANCE_LIST_PUBLISHED",
                 "Khoa đã công bố danh sách thực tập",
-                term.getDepartment().getName() + " công bố " + count + " SV kỳ " + term.getTermName()
+                by + " công bố " + count + " SV kỳ " + term.getTermName()
                     + ". Chuẩn bị giấy tờ để phát cho sinh viên.",
                 OFFICE_LINK);
         }

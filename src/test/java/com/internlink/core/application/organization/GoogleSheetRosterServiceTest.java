@@ -42,7 +42,7 @@ class GoogleSheetRosterServiceTest {
         UUID termId = UUID.randomUUID();
         Department department = Department.builder().code("CIT").name("CNTT").build();
         department.setId(UUID.randomUUID());
-        InternshipTerm term = InternshipTerm.builder().department(department).code("T1").build();
+        InternshipTerm term = InternshipTerm.builder().code("T1").build();
         term.setId(termId);
         User actor = User.builder().email("faculty@ctu.edu.vn").fullName("Faculty")
             .role(UserRole.FACULTY_ADMIN).department(department).build();

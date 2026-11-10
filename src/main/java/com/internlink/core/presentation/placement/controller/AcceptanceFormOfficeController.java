@@ -17,8 +17,9 @@ public class AcceptanceFormOfficeController {
 
     @GetMapping
     public ApiResponse<List<StudentFoundResponse>> intake(@RequestParam(required = false) UUID termId,
-        @RequestParam(required = false) String status) {
-        return ApiResponse.success(service.intake(termId, status));
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) UUID departmentId) {
+        return ApiResponse.success(service.intake(termId, status, departmentId));
     }
     @PatchMapping("/{id}/receive")
     public ApiResponse<StudentFoundResponse> receive(@PathVariable UUID id) {

@@ -25,21 +25,19 @@ public interface JpaJobPositionRepository extends JpaRepository<JobPosition, UUI
     @Query("SELECT j FROM JobPosition j WHERE j.id = :id")
     Optional<JobPosition> findByIdForUpdate(@Param("id") UUID id);
 
-    @EntityGraph(attributePaths = {"company", "term", "department"})
+    @EntityGraph(attributePaths = {"company", "term"})
     List<JobPosition> findByCompanyId(UUID companyId);
 
-    @EntityGraph(attributePaths = {"company", "term", "department"})
+    @EntityGraph(attributePaths = {"company", "term"})
     List<JobPosition> findByTermId(UUID termId);
 
-    @EntityGraph(attributePaths = {"company", "term", "department"})
+    @EntityGraph(attributePaths = {"company", "term"})
     List<JobPosition> findByTermIdAndStatus(UUID termId, JobStatus status);
 
-    @EntityGraph(attributePaths = {"company", "term", "department"})
-    List<JobPosition> findByDepartmentIdAndStatus(UUID departmentId, JobStatus status);
 
     boolean existsByCompanyId(UUID companyId);
 
-    @EntityGraph(attributePaths = {"company", "term", "department", "createdBy"})
+    @EntityGraph(attributePaths = {"company", "term", "createdBy"})
     @Query("""
         SELECT j FROM JobPosition j
         WHERE (:termId IS NULL OR j.term.id = :termId)
@@ -72,7 +70,7 @@ public interface JpaJobPositionRepository extends JpaRepository<JobPosition, UUI
         return searchJobs(keyword, termId, companyId, status, null, null);
     }
 
-    @EntityGraph(attributePaths = {"company", "term", "department", "createdBy"})
+    @EntityGraph(attributePaths = {"company", "term", "createdBy"})
     @Query("""
         SELECT j FROM JobPosition j
         WHERE j.status = com.internlink.core.shared.enums.JobStatus.APPROVED
@@ -104,7 +102,7 @@ public interface JpaJobPositionRepository extends JpaRepository<JobPosition, UUI
         @Param("now") OffsetDateTime now
     );
 
-    @EntityGraph(attributePaths = {"company", "term", "department", "createdBy"})
+    @EntityGraph(attributePaths = {"company", "term", "createdBy"})
     @Query("""
         SELECT j FROM JobPosition j
         WHERE (:termId IS NULL OR j.term.id = :termId)
@@ -134,7 +132,7 @@ public interface JpaJobPositionRepository extends JpaRepository<JobPosition, UUI
         Pageable pageable
     );
 
-    @EntityGraph(attributePaths = {"company", "term", "department", "createdBy"})
+    @EntityGraph(attributePaths = {"company", "term", "createdBy"})
     @Query("""
         SELECT j FROM JobPosition j
         WHERE j.status = com.internlink.core.shared.enums.JobStatus.APPROVED

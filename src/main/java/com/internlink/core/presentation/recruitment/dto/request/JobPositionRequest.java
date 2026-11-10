@@ -35,8 +35,6 @@ public class JobPositionRequest {
 
     private UUID termId;
 
-    @NotNull(message = "Khoa thẩm định không được để trống")
-    private UUID departmentId;
 
     @NotBlank(message = "Tiêu đề vị trí không được để trống")
     @Size(max = 255, message = "Tiêu đề không quá 255 ký tự")

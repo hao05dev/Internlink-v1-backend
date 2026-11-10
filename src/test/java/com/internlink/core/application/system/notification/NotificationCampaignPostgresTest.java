@@ -113,7 +113,6 @@ class NotificationCampaignPostgresTest {
         term =
                 terms.saveAndFlush(
                         InternshipTerm.builder()
-                                .department(department)
                                 .code(UUID.randomUUID().toString())
                                 .termName("Kỳ thử")
                                 .academicYear("2026")
@@ -279,7 +278,7 @@ class NotificationCampaignPostgresTest {
     }
 
     @Test
-    void closedTermAndFacultyFromAnotherDepartmentCannotCreateCampaign() {
+    void closedTermAndFacultyFromAnotherDepartmentCannotReachStudents() {
         var other =
                 departments.saveAndFlush(
                         Department.builder()
@@ -290,9 +289,11 @@ class NotificationCampaignPostgresTest {
                                 .build());
         faculty.setDepartment(other);
         faculty = users.saveAndFlush(faculty);
+        // Kỳ cấp Trường: khoa khác vẫn thao tác trên kỳ nhưng không chạm tới SV của khoa này.
         assertThatThrownBy(() -> service.create(request("Thông báo", UUID.randomUUID())))
-                .isInstanceOf(com.internlink.core.shared.exception.ForbiddenException.class);
-        faculty.setDepartment(term.getDepartment());
+                .isInstanceOf(com.internlink.core.shared.exception.BadRequestException.class)
+                .hasMessageContaining("Không có người nhận");
+        faculty.setDepartment(departments.findAll().getFirst());
         faculty = users.saveAndFlush(faculty);
         term.setStatus(TermStatus.CLOSED);
         term = terms.saveAndFlush(term);

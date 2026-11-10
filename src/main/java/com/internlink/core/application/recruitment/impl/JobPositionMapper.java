@@ -68,8 +68,6 @@ public class JobPositionMapper {
                         entity.getTerm() != null && entity.getTerm().getStatus() != null
                                 ? entity.getTerm().getStatus().name()
                                 : null)
-                .departmentId(entity.getDepartment().getId())
-                .departmentName(entity.getDepartment().getName())
                 .jobType(entity.getJobType())
                 .title(entity.getTitle())
                 .workFormat(entity.getWorkFormat())

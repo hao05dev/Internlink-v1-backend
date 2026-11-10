@@ -43,8 +43,9 @@ public class StudentFoundApplicationController {
         return ApiResponse.success(reviewService.review(id, decision, note, lecturerId));
     }
     @GetMapping("/term/{termId}") @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'SCHOOL_OFFICE', 'ADMIN')")
-    public ApiResponse<List<StudentFoundResponse>> byTerm(@PathVariable UUID termId) {
-        return ApiResponse.success(reviewService.byTerm(termId));
+    public ApiResponse<List<StudentFoundResponse>> byTerm(@PathVariable UUID termId,
+                                                         @RequestParam(required = false) UUID departmentId) {
+        return ApiResponse.success(reviewService.byTerm(termId, departmentId));
     }
     @PostMapping("/term/{termId}/publish") @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN')")
     public ApiResponse<Map<String, Object>> publish(@PathVariable UUID termId) {

@@ -42,6 +42,7 @@ public class AiWorkspaceService {
     private final AiServiceClient client;
     private final AiMatchingMapper mapper;
     private final AiRunNotificationHelper runNotifications;
+    private final com.internlink.core.application.organization.TermDepartmentScope termScope;
 
     private User actor() {
         UUID id = guard.currentUser().getId();
@@ -129,16 +130,9 @@ public class AiWorkspaceService {
         List<InternshipTerm> visibleTerms = List.of();
         List<JobPosition> visibleJobs = List.of();
         if (actor.getRole() == UserRole.STUDENT) {
-            visibleTerms =
-                    profiles.findByUserId(actor.getId())
-                            .filter(p -> p.getProgram() != null)
-                            .map(
-                                    p ->
-                                            terms.findByDepartmentId(
-                                                    p.getProgram().getDepartment().getId()))
-                            .orElse(List.of());
+            visibleTerms = terms.findAllByOrderByStartDateDesc();
         } else if (actor.getRole() == UserRole.FACULTY_ADMIN && actor.getDepartment() != null) {
-            visibleTerms = terms.findByDepartmentId(actor.getDepartment().getId());
+            visibleTerms = terms.findAllByOrderByStartDateDesc();
             visibleJobs =
                     visibleTerms.stream()
                             .flatMap(t -> jobs.findByTermId(t.getId()).stream())
@@ -186,8 +180,8 @@ public class AiWorkspaceService {
                         .orElseThrow(() -> new ResourceNotFoundException("JobPosition", "id", id));
         ResourceAuthorization.require(
                 ResourceAuthorization.representsCompany(actor, job.getCompany().getId())
-                        || ResourceAuthorization.managesDepartment(
-                                actor, job.getDepartment().getId()));
+                        || ResourceAuthorization.actsForSchool(actor)
+                        || ResourceAuthorization.isFacultyAdmin(actor));
         Map<String, Object> checklist =
                 client.infer(
                         "/api/v1/assistance/job-review",
@@ -276,15 +270,10 @@ public class AiWorkspaceService {
     @Transactional(readOnly = true)
     public Map<String, Object> skillGaps(UUID termId) {
         User actor = actor();
-        InternshipTerm term =
-                terms.findById(termId)
-                        .orElseThrow(
-                                () ->
-                                        new ResourceNotFoundException(
-                                                "InternshipTerm", "id", termId));
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor, term.getDepartment().getId()));
-        var roster = rosters.findByTermId(termId);
+        terms.findById(termId)
+                .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
+        var roster = termScope.rosters(termId, actor);
         List<UUID> studentIds =
                 roster.stream()
                         .filter(r -> r.getClaimedUser() != null)

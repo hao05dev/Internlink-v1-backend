@@ -77,7 +77,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             .orElseThrow(() -> new ResourceNotFoundException("JobPosition", "id", jobId));
         User actor = currentActor();
         ResourceAuthorization.require(ResourceAuthorization.representsCompany(actor, job.getCompany().getId())
-            || ResourceAuthorization.managesDepartment(actor, job.getDepartment().getId()));
+            || ResourceAuthorization.actsForSchool(actor));
         return applicationRepository.findByJobId(jobId).stream()
             .map(mapper::map)
             .toList();
@@ -90,7 +90,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
             .orElseThrow(() -> new ResourceNotFoundException("JobPosition", "id", jobId));
         User actor = currentActor();
         ResourceAuthorization.require(ResourceAuthorization.representsCompany(actor, job.getCompany().getId())
-            || ResourceAuthorization.managesDepartment(actor, job.getDepartment().getId()));
+            || ResourceAuthorization.actsForSchool(actor));
         Page<JobApplication> page = applicationRepository.findByJobId(jobId, pageParam.toPageable());
         return paginatedResponseMapper.toPageResponse(page, mapper::map);
     }

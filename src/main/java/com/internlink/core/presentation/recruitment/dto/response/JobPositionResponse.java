@@ -31,8 +31,6 @@ public class JobPositionResponse {
     private UUID termId;
     private String termName;
     private String termStatus;
-    private UUID departmentId;
-    private String departmentName;
     private JobType jobType;
     private String title;
     private WorkFormat workFormat;

@@ -44,7 +44,7 @@ public class FinalResultController {
      * Lấy bảng tổng hợp đánh giá và điểm số thực tập toàn bộ sinh viên trong kỳ (dành cho Quản lý Khoa).
      */
     @GetMapping("/term/{termId}/summary")
-    @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'FACULTY_ADMIN', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<FacultyEvaluationSummaryResponse>>> getTermEvaluationSummary(
         @PathVariable UUID termId,
         @AuthenticationPrincipal CustomUserDetail userDetail
@@ -58,7 +58,7 @@ public class FinalResultController {
      * Mặc định lưu DRAFT để Hội đồng rà soát (trừ khi request.publishImmediately = true).
      */
     @PostMapping("/finalize")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'FACULTY_ADMIN', 'ADMIN')")
     public ResponseEntity<ApiResponse<FinalResultResponse>> finalizeResult(
         @AuthenticationPrincipal CustomUserDetail userDetail,
         @Valid @RequestBody FinalResultRequest request
@@ -75,7 +75,7 @@ public class FinalResultController {
      * Tự động tổng hợp điểm nhanh cho 1 lần thực tập từ các phiếu đánh giá hiện có.
      */
     @PostMapping("/placement/{placementId}/quick-finalize")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'FACULTY_ADMIN', 'ADMIN')")
     public ResponseEntity<ApiResponse<FinalResultResponse>> quickFinalize(
         @PathVariable UUID placementId,
         @AuthenticationPrincipal CustomUserDetail userDetail
@@ -89,7 +89,7 @@ public class FinalResultController {
      * Chuyển trạng thái lần thực tập sang COMPLETED nếu sinh viên đạt (PASSED).
      */
     @PatchMapping("/placement/{placementId}/publish")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'FACULTY_ADMIN', 'ADMIN')")
     public ResponseEntity<ApiResponse<FinalResultResponse>> publishResult(
         @PathVariable UUID placementId,
         @AuthenticationPrincipal CustomUserDetail userDetail
@@ -102,7 +102,7 @@ public class FinalResultController {
      * Công bố điểm hàng loạt cho các sinh viên trong kỳ thực tập.
      */
     @PostMapping("/term/{termId}/publish-batch")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'FACULTY_ADMIN', 'ADMIN')")
     public ResponseEntity<ApiResponse<BatchPublishResultResponse>> publishBatchResults(
         @PathVariable UUID termId,
         @RequestBody(required = false) BatchPublishResultRequest request,
@@ -116,7 +116,7 @@ public class FinalResultController {
      * Tổng hợp điểm hàng loạt cho toàn bộ sinh viên đã đủ điều kiện trong kỳ.
      */
     @PostMapping("/term/{termId}/finalize-batch")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'FACULTY_ADMIN', 'ADMIN')")
     public ResponseEntity<ApiResponse<com.internlink.core.presentation.evaluation.dto.response.BatchFinalizeResponse>> finalizeBatchResults(
         @PathVariable UUID termId,
         @AuthenticationPrincipal CustomUserDetail userDetail

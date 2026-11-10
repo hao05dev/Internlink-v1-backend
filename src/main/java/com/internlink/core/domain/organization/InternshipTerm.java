@@ -12,6 +12,7 @@ import java.util.Map;
 
 
 
+/** Kỳ thực tập cấp Trường CNTT-TT (Văn phòng Trường tạo); Khoa quản lý phần SV thuộc khoa mình. */
 @Entity
 @Table(name = "internship_terms")
 @Getter
@@ -20,10 +21,6 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 public class InternshipTerm extends BaseEntity {
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id", nullable = false)
-    private Department department;
 
     @Column(name = "code", nullable = false, unique = true, length = 50)
     private String code;

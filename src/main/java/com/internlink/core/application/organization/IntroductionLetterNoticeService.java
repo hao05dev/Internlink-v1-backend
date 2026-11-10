@@ -38,6 +38,7 @@ public class IntroductionLetterNoticeService {
     private final NotificationService notifications;
     private final AuditLogService audit;
     private final PlatformTransactionManager transactionManager;
+    private final TermDepartmentScope termScope;
 
     public record NoticeResult(
             int recipients,
@@ -73,10 +74,10 @@ public class IntroductionLetterNoticeService {
                             TermGuard.requireNotClosed(term);
                             var actor = users.findById(actorId).orElseThrow();
                             ResourceAuthorization.require(
-                                    ResourceAuthorization.managesDepartment(
-                                            actor, term.getDepartment().getId()));
+                                    ResourceAuthorization.actsForSchool(actor)
+                                            || ResourceAuthorization.worksOnTerm(actor));
                             List<Recipient> recipients =
-                                    rosters.findByTermId(termId).stream()
+                                    termScope.rosters(termId, actor).stream()
                                             .filter(RosterSelection.of(rosterIds))
                                             .map(
                                                     roster ->

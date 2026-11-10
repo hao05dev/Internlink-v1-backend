@@ -1,5 +1,6 @@
 package com.internlink.core.application.system.notification;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.application.system.NotificationService;
 import com.internlink.core.infrastructure.persistence.jdbc.NotificationCampaignRepository;
 import com.internlink.core.infrastructure.persistence.jpa.*;
@@ -42,8 +43,7 @@ public class NotificationCampaignDeliveryService {
                                 || !Boolean.TRUE.equals(creator.getIsActive())
                                 || (creator.getRole() != UserRole.ADMIN
                                         && creator.getRole() != UserRole.FACULTY_ADMIN)
-                                || !ResourceAuthorization.managesDepartment(
-                                        creator, term.getDepartment().getId())) {
+                                || !ResourceAuthorization.worksOnTerm(creator)) {
                             repository.finish(row, "SKIPPED", "campaign_not_authorized");
                             return;
                         }
@@ -79,7 +79,7 @@ public class NotificationCampaignDeliveryService {
                                     notificationId,
                                     new EmailDispatchContext(
                                             campaign.creator(), "NOTIFICATION_CAMPAIGN",
-                                            campaign.id(), "DEPARTMENT", term.getDepartment().getId()));
+                                            campaign.id(), "DEPARTMENT", DepartmentScope.idOfActor(creator)));
                         } else if (!"IN_APP".equals(campaign.channel())) {
                             String key = "campaign:" + campaign.id() + ":" + row.id();
                             var content = renderer.render(
@@ -91,7 +91,7 @@ public class NotificationCampaignDeliveryService {
                                     row.email(), content, type, key,
                                     new EmailDispatchContext(
                                             campaign.creator(), "NOTIFICATION_CAMPAIGN",
-                                            campaign.id(), "DEPARTMENT", term.getDepartment().getId()));
+                                            campaign.id(), "DEPARTMENT", DepartmentScope.idOfActor(creator)));
                             repository.attach(row, key);
                         }
                         repository.finish(

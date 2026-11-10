@@ -86,7 +86,6 @@ class PlacementAgreementWorkflowServiceTest {
                 new LearningAgreementServiceImpl(
                         agreementRepository,
                         offerRepository,
-                        departmentRepository,
                         userRepository,
                         studentProfileRepository,
                         placementEligibility,
@@ -160,7 +159,6 @@ class PlacementAgreementWorkflowServiceTest {
                 com.internlink.core.presentation.placement.dto.request.LearningAgreementRequest
                         .builder()
                         .offerId(offer.getId())
-                        .departmentId(offer.getApplication().getJob().getDepartment().getId())
                         .targetCredits(10)
                         .learningObjectives("Objectives")
                         .build();
@@ -172,7 +170,7 @@ class PlacementAgreementWorkflowServiceTest {
     @Test
     void thirdSignatureApprovesAgreement() {
         PlacementOffer offer = offer();
-        Department department = offer.getApplication().getJob().getDepartment();
+        Department department = offer.getApplication().getStudent().getDepartment();
         LearningAgreement agreement =
                 LearningAgreement.builder()
                         .offer(offer)
@@ -244,18 +242,19 @@ class PlacementAgreementWorkflowServiceTest {
 
     private PlacementOffer offer() {
         User student = user(UserRole.STUDENT);
-        return offer(student, user(UserRole.COMPANY_MENTOR), company(), department());
+        Department department = department();
+        student.setDepartment(department);
+        return offer(student, user(UserRole.COMPANY_MENTOR), company(), department);
     }
 
     private PlacementOffer offer(
             User student, User mentor, Company company, Department department) {
         InternshipTerm term =
-                InternshipTerm.builder().department(department).code("T1").termName("Term").build();
+                InternshipTerm.builder().code("T1").termName("Term").build();
         term.setId(UUID.randomUUID());
         JobPosition job =
                 JobPosition.builder()
                         .company(company)
-                        .department(department)
                         .term(term)
                         .title("Intern")
                         .workFormat(WorkFormat.ONSITE)

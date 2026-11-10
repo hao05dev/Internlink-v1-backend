@@ -1,5 +1,6 @@
 package com.internlink.core.application.portfolio;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.domain.placement.InternshipPlacement;
 import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterRepository;
 
@@ -67,7 +68,8 @@ public class PortfolioMetadataHelper {
         m.put(
                 "termStatus",
                 p.getTerm().getStatus() != null ? p.getTerm().getStatus().name() : "ACTIVE");
-        m.put("departmentName", p.getTerm().getDepartment().getName());
+        var department = DepartmentScope.of(p);
+        m.put("departmentName", department != null ? department.getName() : "");
         m.put("startDate", p.getStartDate());
         m.put("endDate", p.getEndDate());
         m.put("status", p.getStatus());

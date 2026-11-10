@@ -87,7 +87,6 @@ abstract class RecruitmentTestFixture {
                 jobRepository,
                 companyRepository,
                 termRepository,
-                departmentRepository,
                 userRepository,
                 jobSkillRepository,
                 securityGuard,
@@ -166,7 +165,6 @@ abstract class RecruitmentTestFixture {
     protected InternshipTerm term(Department department) {
         InternshipTerm value =
                 InternshipTerm.builder()
-                        .department(department)
                         .code("T1")
                         .termName("Term")
                         .academicYear("2026")
@@ -207,7 +205,6 @@ abstract class RecruitmentTestFixture {
                         .company(company)
                         .jobType(JobType.INTERNSHIP)
                         .term(term)
-                        .department(department)
                         .title("Java Intern")
                         .workFormat(WorkFormat.HYBRID)
                         .location("CT")
@@ -241,7 +238,6 @@ abstract class RecruitmentTestFixture {
                 .companyId(companyId)
                 .jobType(JobType.INTERNSHIP)
                 .termId(termId)
-                .departmentId(departmentId)
                 .title("Java Intern")
                 .workFormat(WorkFormat.HYBRID)
                 .location("Can Tho")

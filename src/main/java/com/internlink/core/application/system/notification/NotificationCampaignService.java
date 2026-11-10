@@ -1,5 +1,7 @@
 package com.internlink.core.application.system.notification;
 
+import com.internlink.core.application.organization.TermDepartmentScope;
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.application.system.AuditLogService;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.InternshipTerm;
@@ -31,13 +33,15 @@ public class NotificationCampaignService {
     private final SecurityGuard guard;
     private final AuditLogService audit;
     private final EmailRecipientPolicy recipients;
+    private final TermDepartmentScope termScope;
 
     @Transactional(readOnly = true)
     public Preview preview(NotificationCampaignRequest request) {
         validate(request);
         var term = authorize(request.termId());
         TermGuard.requireNotClosed(term);
-        var targets = audiences.audience(request.termId(), request.audience());
+        var targets = audiences.audience(
+                request.termId(), request.audience(), termScope.restrictTo(actor()));
         int eligible = 0;
         for (var target : targets)
             if (target.userId() == null
@@ -78,7 +82,8 @@ public class NotificationCampaignService {
                 throw new BadRequestException("Request key đã được dùng với nội dung khác");
             return repository.detail((UUID) previous.get().get("id"), 0, 20);
         }
-        var targets = audiences.audience(request.termId(), request.audience());
+        var targets = audiences.audience(
+                request.termId(), request.audience(), termScope.restrictTo(actor));
         if (targets.isEmpty()) throw new BadRequestException("Không có người nhận phù hợp");
         UUID id = repository.create(actor.getId(), hash, request, targets);
         audit.logAction(
@@ -114,14 +119,14 @@ public class NotificationCampaignService {
 
     @Transactional(readOnly = true)
     public Detail detail(UUID id, int page) {
-        authorize(repository.campaign(id, false).termId());
+        authorize(repository.campaign(id, false));
         return repository.detail(id, Math.max(0, page), 20);
     }
 
     @Transactional
     public void cancel(UUID id) {
         var campaign = repository.campaign(id, true);
-        authorize(campaign.termId());
+        authorize(campaign);
         repository.cancel(id);
         audit.logAction(
                 actor().getId(),
@@ -136,7 +141,7 @@ public class NotificationCampaignService {
     @Transactional
     public void retry(UUID id) {
         var campaign = repository.campaign(id, true);
-        var term = authorize(campaign.termId());
+        var term = authorize(campaign);
         TermGuard.requireNotClosed(term);
         if (!"COMPLETED".equals(campaign.status()))
             throw new BadRequestException("Chỉ thử lại người nhận lỗi của campaign đã kết thúc");
@@ -156,8 +161,19 @@ public class NotificationCampaignService {
         var term =
                 terms.findById(termId)
                         .orElseThrow(() -> new ResourceNotFoundException("Term", "id", termId));
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor(), term.getDepartment().getId()));
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor()));
+        return term;
+    }
+
+    /** Quản lý Khoa chỉ xem/điều khiển campaign do người cùng khoa tạo. */
+    private InternshipTerm authorize(NotificationCampaignRepository.Campaign campaign) {
+        var term = authorize(campaign.termId());
+        var actor = actor();
+        if (!ResourceAuthorization.isAdmin(actor)) {
+            var creator = users.findById(campaign.creator()).orElse(null);
+            ResourceAuthorization.require(creator != null
+                    && DepartmentScope.sameDepartment(actor, DepartmentScope.idOfActor(creator)));
+        }
         return term;
     }
 

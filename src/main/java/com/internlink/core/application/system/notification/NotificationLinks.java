@@ -34,7 +34,7 @@ public final class NotificationLinks {
             case COMPANY_REP -> "/company/dashboard";
             case FACULTY_ADMIN -> "/faculty/dashboard";
             case ADMIN -> "/admin/dashboard";
-            case SCHOOL_OFFICE -> "/school-office/acceptance-forms";
+            case SCHOOL_OFFICE -> "/school-office/dashboard";
         };
     }
 }

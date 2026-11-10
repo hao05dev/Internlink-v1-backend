@@ -80,9 +80,6 @@ public class FacultyLecturerManagementServiceImpl implements FacultyLecturerMana
 
         InternshipTerm term = termId != null ? termRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId)) : null;
-        if (term != null && !term.getDepartment().getId().equals(departmentId)) {
-            throw new com.internlink.core.shared.exception.BadRequestException("Học kỳ không thuộc khoa");
-        }
         String email = req.getEmail().trim().toLowerCase();
 
         User user = userRepository.findByEmail(email).orElse(null);
@@ -142,9 +139,6 @@ public class FacultyLecturerManagementServiceImpl implements FacultyLecturerMana
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", departmentId));
         InternshipTerm term = termId != null ? termRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId)) : null;
-        if (term != null && !term.getDepartment().getId().equals(departmentId)) {
-            throw new com.internlink.core.shared.exception.BadRequestException("Học kỳ không thuộc khoa");
-        }
 
         int newlyCreated = 0;
         int updated = 0;

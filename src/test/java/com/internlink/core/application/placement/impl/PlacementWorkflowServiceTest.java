@@ -86,7 +86,6 @@ class PlacementWorkflowServiceTest {
                 new LearningAgreementServiceImpl(
                         agreementRepository,
                         offerRepository,
-                        departmentRepository,
                         userRepository,
                         studentProfileRepository,
                         placementEligibility,
@@ -268,12 +267,11 @@ class PlacementWorkflowServiceTest {
     private PlacementOffer offer(
             User student, User mentor, Company company, Department department) {
         InternshipTerm term =
-                InternshipTerm.builder().department(department).code("T1").termName("Term").build();
+                InternshipTerm.builder().code("T1").termName("Term").build();
         term.setId(UUID.randomUUID());
         JobPosition job =
                 JobPosition.builder()
                         .company(company)
-                        .department(department)
                         .term(term)
                         .title("Intern")
                         .workFormat(WorkFormat.ONSITE)

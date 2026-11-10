@@ -52,10 +52,13 @@ class IntroductionLetterServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new IntroductionLetterService(letterRequests, terms, rosters, users, security, notifications);
+        service = new IntroductionLetterService(letterRequests, terms, rosters, users, security, notifications,
+                new com.internlink.core.application.organization.TermDepartmentScope(rosters,
+                        org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaInternshipPlacementRepository.class),
+                        org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class)));
         ownDepartment = department("CICT");
         otherDepartment = department("CEN");
-        term = InternshipTerm.builder().department(ownDepartment).code("HK1").termName("Học kỳ 1").build();
+        term = InternshipTerm.builder().code("HK1").termName("Học kỳ 1").build();
         term.setId(UUID.randomUUID());
         student = user(UserRole.STUDENT, ownDepartment);
         lenient().when(rosters.findByTermIdAndClaimedUserId(any(), any())).thenReturn(Optional.empty());
@@ -137,13 +140,17 @@ class IntroductionLetterServiceTest {
     @Test
     void listingByTermIsLimitedToThatDepartment() {
         when(terms.findById(term.getId())).thenReturn(Optional.of(term));
+        var request = pendingRequest();
+        when(letterRequests.findByTermIdOrderByCreatedAtDesc(term.getId())).thenReturn(List.of(request));
+
         actAs(user(UserRole.FACULTY_ADMIN, otherDepartment));
-        assertThatThrownBy(() -> service.byTerm(term.getId())).isInstanceOf(ForbiddenException.class);
+        assertThat(service.byTerm(term.getId())).isEmpty();
 
         actAs(user(UserRole.LECTURER, otherDepartment));
-        assertThatThrownBy(() -> service.byTerm(term.getId())).isInstanceOf(ForbiddenException.class);
+        assertThat(service.byTerm(term.getId())).isEmpty();
 
-        verify(letterRequests, never()).findByTermIdOrderByCreatedAtDesc(any());
+        actAs(user(UserRole.FACULTY_ADMIN, ownDepartment));
+        assertThat(service.byTerm(term.getId())).hasSize(1);
     }
 
     @Test

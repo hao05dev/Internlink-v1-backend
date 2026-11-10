@@ -1,5 +1,6 @@
 package com.internlink.core.application.evaluation;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.domain.evaluation.AssessmentScheme;
 import com.internlink.core.domain.organization.StudentRoster;
 import com.internlink.core.infrastructure.persistence.jpa.*;
@@ -49,10 +50,9 @@ public class AssessmentSchemeService {
                                 () ->
                                         new ResourceNotFoundException(
                                                 "AcademicProgram", "id", request.programId()));
+        // Khoa chỉ xây dựng phương án đánh giá cho ngành thuộc khoa mình.
         ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor(), term.getDepartment().getId()));
-        if (!program.getDepartment().getId().equals(term.getDepartment().getId()))
-            throw new BadRequestException("Ngành không thuộc đơn vị quản lý kỳ thực tập");
+                ResourceAuthorization.managesDepartment(actor(), program.getDepartment().getId()));
         if (!"REGULAR".equals(program.getTrack()))
             throw new BadRequestException(
                     "Phạm vi này chỉ áp dụng chương trình đại trà, không gồm CTCLC");
@@ -103,7 +103,7 @@ public class AssessmentSchemeService {
         var scheme = get(id);
         ResourceAuthorization.require(
                 ResourceAuthorization.managesDepartment(
-                        actor(), scheme.getTerm().getDepartment().getId()));
+                        actor(), scheme.getProgram().getDepartment().getId()));
         if (!"DRAFT".equals(scheme.getStatus()))
             throw new BadRequestException("Chỉ có thể duyệt phương án đang DRAFT");
         if (schemes.existsByTermIdAndProgramIdAndCohortCodeAndCourseCodeAndStatus(
@@ -127,7 +127,7 @@ public class AssessmentSchemeService {
         var scheme = get(id);
         ResourceAuthorization.require(
                 ResourceAuthorization.managesDepartment(
-                        actor(), scheme.getTerm().getDepartment().getId()));
+                        actor(), scheme.getProgram().getDepartment().getId()));
         if (!"APPROVED".equals(scheme.getStatus()))
             throw new BadRequestException("Chỉ có thể thay thế phương án đã duyệt");
         scheme.setStatus("RETIRED");
@@ -148,7 +148,7 @@ public class AssessmentSchemeService {
         var scheme = get(schemeId);
         ResourceAuthorization.require(
                 ResourceAuthorization.managesDepartment(
-                        actor(), placement.getTerm().getDepartment().getId()));
+                        actor(), DepartmentScope.idOf(placement)));
         if (placement.getStatus() != PlacementStatus.PREPARING
                 || placement.getAssessmentScheme() != null)
             throw new BadRequestException(
@@ -185,15 +185,15 @@ public class AssessmentSchemeService {
 
     @Transactional(readOnly = true)
     public List<AssessmentSchemeResponse> byTerm(UUID termId) {
-        var term =
-                terms.findById(termId)
-                        .orElseThrow(
-                                () ->
-                                        new ResourceNotFoundException(
-                                                "InternshipTerm", "id", termId));
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor(), term.getDepartment().getId()));
-        return schemes.findByTermId(termId).stream().map(this::response).toList();
+        terms.findById(termId)
+                .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
+        var actor = actor();
+        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
+        return schemes.findByTermId(termId).stream()
+                .filter(sc -> ResourceAuthorization.managesDepartment(
+                        actor, sc.getProgram().getDepartment().getId()))
+                .map(this::response)
+                .toList();
     }
 
     @Transactional(readOnly = true)

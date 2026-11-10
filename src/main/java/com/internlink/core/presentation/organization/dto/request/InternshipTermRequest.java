@@ -21,8 +21,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class InternshipTermRequest {
 
-    @NotNull(message = "Khoa tổ chức không được để trống")
-    private UUID departmentId;
 
     @NotBlank(message = "Mã kỳ thực tập không được để trống")
     @Size(max = 50, message = "Mã kỳ không quá 50 ký tự")

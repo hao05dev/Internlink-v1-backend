@@ -1,5 +1,6 @@
 package com.internlink.core.application.evaluation.impl;
 
+import com.internlink.core.application.organization.TermDepartmentScope;
 import com.internlink.core.application.evaluation.AssessmentRules;
 import com.internlink.core.application.evaluation.CtuGradingHelper;
 import com.internlink.core.application.evaluation.FinalResultService;
@@ -51,6 +52,7 @@ public class FinalResultServiceImpl implements FinalResultService {
     private final FinalResultNotificationHelper notificationHelper;
     private final TermEvaluationSummaryBuilder summaryBuilder;
     private final FinalResultBatchPublisher batchPublisher;
+    private final TermDepartmentScope termScope;
 
     @Override
     @Transactional(readOnly = true)
@@ -89,8 +91,7 @@ public class FinalResultServiceImpl implements FinalResultService {
 
         User admin = userRepository.findById(decidedByUserId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", decidedByUserId));
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            admin, placement.getTerm().getDepartment().getId()));
+        ResourceAuthorization.require(ResourceAuthorization.canGrade(admin, placement));
 
         if (request.getMentorScore() != null || request.getLecturerScore() != null
             || request.getComplianceScore() != null || request.getMentorWeight() != null
@@ -195,8 +196,7 @@ public class FinalResultServiceImpl implements FinalResultService {
 
         User publisher = userRepository.findById(publishedByUserId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", publishedByUserId));
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            publisher, result.getPlacement().getTerm().getDepartment().getId()));
+        ResourceAuthorization.require(ResourceAuthorization.canGrade(publisher, result.getPlacement()));
 
         result.setPublishedAt(OffsetDateTime.now());
         result.setDecidedBy(publisher);
@@ -223,10 +223,7 @@ public class FinalResultServiceImpl implements FinalResultService {
         User admin = userRepository.findById(facultyAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", facultyAdminId));
 
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            admin, term.getDepartment().getId()));
-
-        return summaryBuilder.buildSummary(termId);
+        return summaryBuilder.buildSummary(termId, termScope.gradablePlacements(termId, admin));
     }
 
     @Override
@@ -239,10 +236,7 @@ public class FinalResultServiceImpl implements FinalResultService {
         User admin = userRepository.findById(facultyAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", facultyAdminId));
 
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            admin, term.getDepartment().getId()));
-
-        List<InternshipPlacement> placements = placementRepository.findByTermId(termId);
+        List<InternshipPlacement> placements = termScope.gradablePlacements(termId, admin);
         int finalizedCount = 0;
         int skippedCount = 0;
         List<String> messages = new ArrayList<>();
@@ -281,8 +275,7 @@ public class FinalResultServiceImpl implements FinalResultService {
         User admin = userRepository.findById(facultyAdminId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", facultyAdminId));
 
-        ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            admin, placement.getTerm().getDepartment().getId()));
+        ResourceAuthorization.require(ResourceAuthorization.canGrade(admin, placement));
 
         FinalResult existing = finalResultRepository.findByPlacementId(placementId).orElse(null);
         if (existing != null && existing.getPublishedAt() != null) {

@@ -48,6 +48,7 @@ class AiWorkspaceServiceTest {
     @Mock AiServiceClient client;
     @Spy AiMatchingMapper mapper = new AiMatchingMapper();
     @Mock AiRunNotificationHelper aiRunNotificationHelper;
+    @Mock com.internlink.core.application.organization.TermDepartmentScope termScope;
     @InjectMocks AiWorkspaceService service;
 
     User actor(UserRole role) {
@@ -164,7 +165,6 @@ class AiWorkspaceServiceTest {
                         Optional.of(
                                 JobPosition.builder()
                                         .company(other)
-                                        .department(department)
                                         .build()));
         assertThatThrownBy(() -> service.reviewJob(id)).isInstanceOf(ForbiddenException.class);
         verifyNoInteractions(client);
@@ -178,8 +178,8 @@ class AiWorkspaceServiceTest {
         user.setDepartment(department);
         UUID id = UUID.randomUUID();
         when(terms.findById(id))
-                .thenReturn(Optional.of(InternshipTerm.builder().department(department).build()));
-        when(rosters.findByTermId(id))
+                .thenReturn(Optional.of(InternshipTerm.builder().build()));
+        when(termScope.rosters(org.mockito.ArgumentMatchers.eq(id), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(List.of(StudentRoster.builder().claimedUser(user).build()));
         assertThat(service.skillGaps(id)).containsEntry("suppressed", true);
         verifyNoInteractions(skills, client);

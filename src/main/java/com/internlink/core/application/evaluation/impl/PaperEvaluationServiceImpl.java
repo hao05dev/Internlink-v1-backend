@@ -1,5 +1,6 @@
 package com.internlink.core.application.evaluation.impl;
 
+import com.internlink.core.shared.security.DepartmentScope;
 import com.internlink.core.application.evaluation.PaperEvaluationService;
 import com.internlink.core.application.system.AuditLogService;
 import com.internlink.core.domain.auth.User;
@@ -53,7 +54,7 @@ public class PaperEvaluationServiceImpl implements PaperEvaluationService {
             && placement.getLecturer() != null
             && actor.getId().equals(placement.getLecturer().getId());
         boolean isFaculty = actor.getRole() == UserRole.FACULTY_ADMIN
-            && ResourceAuthorization.managesDepartment(actor, placement.getTerm().getDepartment().getId());
+            && ResourceAuthorization.managesDepartment(actor, DepartmentScope.idOf(placement));
 
         if (!isLecturer && !isFaculty) {
             throw new BadRequestException("Chỉ GVHD phụ trách hoặc Quản lý khoa mới được số hóa phiếu đánh giá cơ quan");

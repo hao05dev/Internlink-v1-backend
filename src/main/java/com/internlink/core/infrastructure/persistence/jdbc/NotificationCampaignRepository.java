@@ -254,7 +254,7 @@ WHERE campaign_id=? ORDER BY r.id LIMIT ? OFFSET ?
         String filter =
                 department == null
                         ? ""
-                        : " WHERE c.term_id IN (SELECT id FROM internship_terms WHERE"
+                        : " WHERE c.created_by IN (SELECT id FROM users WHERE"
                                 + " department_id=?)";
         var args = new ArrayList<Object>();
         if (department != null) args.add(department);
