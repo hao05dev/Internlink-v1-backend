@@ -1,5 +1,6 @@
 package com.internlink.core.presentation.recruitment.dto.response;
 
+import com.internlink.core.shared.enums.ApplicationMethod;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.JobType;
 import com.internlink.core.shared.enums.WorkFormat;
@@ -52,6 +53,13 @@ public class JobPositionResponse {
     private OffsetDateTime closedEarlyAt;
     private Boolean isExpired;
     private Boolean isAcceptingApplications;
+
+    /** IN_APP hoặc EXTERNAL; với EXTERNAL, SV nộp qua các kênh externalApply* dưới đây. */
+    private ApplicationMethod applicationMethod;
+    private String externalApplyUrl;
+    private String externalApplyEmail;
+    private String externalApplySubject;
+    private String externalApplyNote;
 
     /** Số hồ sơ đang được xét (không tính hồ sơ đã rút); chỉ điền ở danh sách công khai. */
     private Long applicantCount;

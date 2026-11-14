@@ -148,6 +148,7 @@ public class AiMatchScoringHandler {
 
         return AiMatchScoreResponse.builder().jobId(job.getId()).jobTitle(job.getTitle())
             .companyName(job.getCompany().getCompanyName())
+            .applicationMethod(job.getApplicationMethod())
             .matchScore(score)
             .scoreLabel(scoreLabel)
             .scoreFormatted(scoreFormatted)

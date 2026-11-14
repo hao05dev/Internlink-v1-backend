@@ -1,10 +1,12 @@
 package com.internlink.core.presentation.recruitment.dto.request;
 
+import com.internlink.core.shared.enums.ApplicationMethod;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.JobType;
 import com.internlink.core.shared.enums.WorkFormat;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -72,6 +74,21 @@ public class JobPositionRequest {
     private BigDecimal stipendAmount;
 
     @Builder.Default private JobStatus status = JobStatus.DRAFT;
+
+    /**
+     * Để trống: VP Trường đăng cho DN chưa có tài khoản đại diện thì mặc định EXTERNAL, còn lại IN_APP.
+     * EXTERNAL cần ít nhất một trong link, email hoặc hướng dẫn nộp hồ sơ.
+     */
+    private ApplicationMethod applicationMethod;
+
+    @Size(max = 2048) private String externalApplyUrl;
+
+    @Email(message = "Email nhận hồ sơ không hợp lệ")
+    @Size(max = 255) private String externalApplyEmail;
+
+    @Size(max = 255) private String externalApplySubject;
+
+    @Size(max = 4000) private String externalApplyNote;
 
     /** Danh sách kỹ năng yêu cầu chi tiết (kèm trọng số và phân loại) */
     @Builder.Default private List<@Valid JobSkillRequest> skills = List.of();

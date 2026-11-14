@@ -19,6 +19,8 @@ public class AiMatchScoreResponse {
     private UUID jobId;
     private String jobTitle;
     private String companyName;
+    /** IN_APP hoặc EXTERNAL: giúp giao diện đổi nút "Ứng tuyển" cho tin nộp qua kênh của DN. */
+    private com.internlink.core.shared.enums.ApplicationMethod applicationMethod;
     private BigDecimal matchScore; // Thang điểm 0 -> 100
     private String scoreLabel; // "Cao", "Vừa", "Thấp", "Chưa đủ dữ liệu"
     private String scoreFormatted; // "85/100"

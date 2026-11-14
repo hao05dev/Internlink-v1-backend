@@ -93,7 +93,8 @@ abstract class RecruitmentTestFixture {
                 mapper,
                 skillHandler,
                 mock(com.internlink.core.application.system.upload.MediaReferencePolicy.class),
-                new com.internlink.core.application.recruitment.JobPositionAccessPolicy(userRepository, securityGuard)),
+                new com.internlink.core.application.recruitment.JobPositionAccessPolicy(userRepository, securityGuard),
+                new ExternalApplyPolicy(userRepository, applicationRepository)),
             new JobPositionLifecycleService(
                 jobRepository,
                 userRepository,

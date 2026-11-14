@@ -5,6 +5,7 @@ import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.InternshipTerm;
 import com.internlink.core.domain.organization.StudentRoster;
 import com.internlink.core.domain.placement.*;
+import com.internlink.core.domain.recruitment.JobPosition;
 import com.internlink.core.domain.system.Document;
 import com.internlink.core.infrastructure.persistence.jpa.*;
 import com.internlink.core.presentation.placement.dto.request.StudentFoundRequest;
@@ -28,6 +29,7 @@ public class StudentFoundApplicationService {
     private final JpaInternshipTermRepository terms;
     private final JpaDocumentRepository documents;
     private final JpaLearningAgreementRepository agreements;
+    private final JpaJobPositionRepository jobs;
     private final AcceptanceFormLookup lookup;
     private final AcceptanceFormMapper mapper;
     private final AcceptanceFormNotifier notifier;
@@ -50,6 +52,7 @@ public class StudentFoundApplicationService {
         var app = StudentFoundApplication.builder().term(term).student(student)
             .source(agreement != null ? AcceptanceFormSource.SYSTEM_OFFER : AcceptanceFormSource.SELF_FOUND)
             .agreement(agreement).status(AcceptanceFormStatus.DRAFT).build();
+        app.setSourceJob(resolveSourceJob(request));
         applyForm(app, request);
         return mapper.toResponse(applications.save(app));
     }
@@ -65,6 +68,7 @@ public class StudentFoundApplicationService {
         if (!app.getTerm().getId().equals(request.termId()) || !Objects.equals(currentAgreement, request.agreementId()))
             throw new BadRequestException("Không thể đổi kỳ hoặc nguồn của Phiếu tiếp nhận");
         requireValidPeriod(request, app.getTerm(), requireRoster(app.getTerm(), app.getStudent()));
+        app.setSourceJob(resolveSourceJob(request));
         applyForm(app, request);
         app.setStatus(AcceptanceFormStatus.DRAFT);
         app.setAcceptanceDocument(null);
@@ -131,6 +135,18 @@ public class StudentFoundApplicationService {
         if (applications.findByAgreementId(agreementId).isPresent())
             throw new BadRequestException("Thỏa thuận này đã có Phiếu tiếp nhận");
         return agreement;
+    }
+
+    /** Tin nguồn chỉ dành cho nơi tự tìm, và phải là tin EXTERNAL đã công bố. */
+    private JobPosition resolveSourceJob(StudentFoundRequest request) {
+        if (request.sourceJobId() == null) return null;
+        if (request.agreementId() != null)
+            throw new BadRequestException("Phiếu từ thỏa thuận trong hệ thống không gắn tin ứng tuyển ngoài");
+        var job = jobs.findById(request.sourceJobId())
+            .orElseThrow(() -> new ResourceNotFoundException("JobPosition", "id", request.sourceJobId()));
+        if (!job.isExternalApply() || (job.getStatus() != JobStatus.APPROVED && job.getStatus() != JobStatus.CLOSED))
+            throw new BadRequestException("Tin nguồn phải là tin ứng tuyển ngoài hệ thống đã được công bố");
+        return job;
     }
 
     private StudentRoster requireRoster(InternshipTerm term, User student) {

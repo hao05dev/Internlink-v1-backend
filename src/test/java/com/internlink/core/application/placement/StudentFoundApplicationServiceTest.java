@@ -37,6 +37,7 @@ class StudentFoundApplicationServiceTest {
     @Mock JpaInternshipTermRepository terms;
     @Mock JpaDocumentRepository documents;
     @Mock JpaLearningAgreementRepository agreements;
+    @Mock JpaJobPositionRepository jobs;
     @Mock JpaUserRepository users;
     @Mock SecurityGuard security;
     @Mock NotificationService notifications;
@@ -60,7 +61,7 @@ class StudentFoundApplicationServiceTest {
         var notifier = new AcceptanceFormNotifier(notifications, users);
         var eligibility = new PlacementEligibilityService(placements, rosters, null);
         studentService = new StudentFoundApplicationService(applications, placements, rosters, terms, documents,
-            agreements, lookup, mapper, notifier);
+            agreements, jobs, lookup, mapper, notifier);
         officeService = new AcceptanceFormOfficeService(applications, lookup, mapper, notifier);
         reviewService = new AcceptanceFormReviewService(applications, placements, rosters, terms, users,
             eligibility, placementService, lookup, mapper, notifier,
@@ -155,6 +156,31 @@ class StudentFoundApplicationServiceTest {
     }
 
     @Test
+    void selfFoundFormRecordsTheExternalJobItCameFrom() {
+        var job = job(ApplicationMethod.EXTERNAL, JobStatus.CLOSED);
+        actAs(student);
+
+        var created = studentService.create(withSource(job.getId()));
+
+        assertThat(created.sourceJobId()).isEqualTo(job.getId());
+        assertThat(created.sourceJobTitle()).isEqualTo("Thực tập sinh Java");
+        assertThat(created.sourceJobCompanyName()).isEqualTo("Công ty Ngoài");
+        assertThat(created.source()).isEqualTo(AcceptanceFormSource.SELF_FOUND);
+    }
+
+    @Test
+    void sourceJobMustBeAPublishedExternalJob() {
+        var inApp = job(ApplicationMethod.IN_APP, JobStatus.APPROVED);
+        var draft = job(ApplicationMethod.EXTERNAL, JobStatus.DRAFT);
+        actAs(student);
+
+        assertThatThrownBy(() -> studentService.create(withSource(inApp.getId())))
+            .isInstanceOf(BadRequestException.class).hasMessageContaining("ứng tuyển ngoài");
+        assertThatThrownBy(() -> studentService.create(withSource(draft.getId())))
+            .isInstanceOf(BadRequestException.class).hasMessageContaining("ứng tuyển ngoài");
+    }
+
+    @Test
     void systemOfferApprovalActivatesPlacementFromAgreement() {
         var agreement = LearningAgreement.builder().student(student).status(AgreementStatus.APPROVED).build();
         agreement.setId(UUID.randomUUID());
@@ -189,6 +215,21 @@ class StudentFoundApplicationServiceTest {
     private StudentFoundRequest request(LocalDate start, LocalDate end, UUID agreementId) {
         return new StudentFoundRequest(term.getId(), "Đơn vị X", "Cần Thơ", "Người nhận",
             "host@example.com", "Làm dự án", start, end, agreementId);
+    }
+
+    private StudentFoundRequest withSource(UUID sourceJobId) {
+        return new StudentFoundRequest(term.getId(), "Công ty Ngoài", "Cần Thơ", "Người nhận",
+            "host@example.com", "Làm dự án", LocalDate.of(2026, 9, 7), LocalDate.of(2026, 10, 30), null, sourceJobId);
+    }
+
+    private com.internlink.core.domain.recruitment.JobPosition job(ApplicationMethod method, JobStatus status) {
+        var company = com.internlink.core.domain.company.Company.builder().companyName("Công ty Ngoài").build();
+        company.setId(UUID.randomUUID());
+        var job = com.internlink.core.domain.recruitment.JobPosition.builder().company(company)
+            .title("Thực tập sinh Java").applicationMethod(method).status(status).build();
+        job.setId(UUID.randomUUID());
+        when(jobs.findById(job.getId())).thenReturn(Optional.of(job));
+        return job;
     }
 
     private Document activeDocument(UUID contextId) {

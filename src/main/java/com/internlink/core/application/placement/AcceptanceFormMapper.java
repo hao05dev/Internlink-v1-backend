@@ -34,7 +34,10 @@ public class AcceptanceFormMapper {
             term.getTermName(), department != null ? department.getId() : null,
             department != null ? department.getName() : null,
             credits, InternshipDurationRule.requiredWeeks(credits),
-            a.getUpdatedAt(), a.getReceivedAt(), a.getReviewedAt(), a.getPublishedAt(), a.getDocumentsCollectedAt());
+            a.getUpdatedAt(), a.getReceivedAt(), a.getReviewedAt(), a.getPublishedAt(), a.getDocumentsCollectedAt(),
+            a.getSourceJob() != null ? a.getSourceJob().getId() : null,
+            a.getSourceJob() != null ? a.getSourceJob().getTitle() : null,
+            a.getSourceJob() != null ? a.getSourceJob().getCompany().getCompanyName() : null);
     }
 
     private UUID placementId(StudentFoundApplication a) {

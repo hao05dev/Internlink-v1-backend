@@ -39,6 +39,7 @@ public class JobPositionWriteService {
     private final JobSkillAssignmentHandler jobSkillAssignmentHandler;
     private final com.internlink.core.application.system.upload.MediaReferencePolicy media;
     private final com.internlink.core.application.recruitment.JobPositionAccessPolicy access;
+    private final ExternalApplyPolicy externalApply;
 
     @Transactional
     public JobPositionResponse createJob(JobPositionRequest request, UUID createdByUserId) {
@@ -125,6 +126,7 @@ public class JobPositionWriteService {
 
         JobPosition job = jobBuilder.build();
         locations.apply(job, request);
+        externalApply.applyOnCreate(job, request, createdBy);
         JobPosition savedJob = jobPositionRepository.save(job);
         jobSkillAssignmentHandler.saveJobSkills(savedJob, request);
 
@@ -187,6 +189,7 @@ public class JobPositionWriteService {
                         : List.of());
         job.setBenefits(request.getBenefits() != null ? request.getBenefits() : List.of());
         job.setStipendAmount(request.getStipendAmount());
+        externalApply.applyOnUpdate(job, request);
 
         JobPosition updatedJob = jobPositionRepository.save(job);
 

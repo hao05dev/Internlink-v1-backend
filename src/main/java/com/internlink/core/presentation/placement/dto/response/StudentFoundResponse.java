@@ -13,4 +13,5 @@ public record StudentFoundResponse(UUID id, UUID termId, UUID studentId, String 
     String termName, UUID departmentId, String departmentName,
     Integer internshipCredits, Integer requiredWeeks,
     OffsetDateTime updatedAt, OffsetDateTime receivedAt, OffsetDateTime reviewedAt,
-    OffsetDateTime publishedAt, OffsetDateTime documentsCollectedAt) {}
+    OffsetDateTime publishedAt, OffsetDateTime documentsCollectedAt,
+    UUID sourceJobId, String sourceJobTitle, String sourceJobCompanyName) {}

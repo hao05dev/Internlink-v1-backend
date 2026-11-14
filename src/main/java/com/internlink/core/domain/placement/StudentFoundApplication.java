@@ -2,6 +2,7 @@ package com.internlink.core.domain.placement;
 
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.organization.InternshipTerm;
+import com.internlink.core.domain.recruitment.JobPosition;
 import com.internlink.core.domain.system.Document;
 import com.internlink.core.shared.domain.BaseEntity;
 import jakarta.persistence.*;
@@ -50,6 +51,9 @@ public class StudentFoundApplication extends BaseEntity {
     private String source = AcceptanceFormSource.SELF_FOUND;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "agreement_id")
     private LearningAgreement agreement;
+    /** Tin EXTERNAL mà SV đã ứng tuyển ngoài hệ thống rồi được nhận (chỉ với SELF_FOUND). */
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "source_job_id")
+    private JobPosition sourceJob;
     @Column(name = "received_at")
     private OffsetDateTime receivedAt;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "received_by_user_id")

@@ -49,6 +49,7 @@ public enum ErrorCode {
     // === TUYỂN DỤNG & ỨNG TUYỂN (JOB) ===
     JOB_POSITION_CLOSED("job_closed", HttpStatus.BAD_REQUEST, "Vị trí tuyển dụng đã đóng hoặc hết hạn tiếp nhận hồ sơ"),
     ALREADY_APPLIED("job_already_applied", HttpStatus.CONFLICT, "Sinh viên đã nộp hồ sơ ứng tuyển vào vị trí này"),
+    JOB_APPLY_EXTERNAL_ONLY("job_apply_external_only", HttpStatus.BAD_REQUEST, "Tin này nhận hồ sơ qua email/link của doanh nghiệp, không nộp trong hệ thống"),
     TERM_NOT_ACTIVE("term_not_active", HttpStatus.BAD_REQUEST, "Kỳ thực tập hiện tại chưa mở hoặc đã kết thúc giai đoạn ứng tuyển");
 
     private final String code;

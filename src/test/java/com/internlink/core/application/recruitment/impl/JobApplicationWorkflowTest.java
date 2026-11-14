@@ -44,6 +44,28 @@ import java.util.UUID;
 
 class JobApplicationWorkflowTest extends RecruitmentTestFixture {
     @Test
+    void externalJobRejectsInAppApplicationWithDedicatedCode() {
+        User student = user(UserRole.STUDENT);
+        JobPosition job = job(company(), term(department()), department(), JobStatus.APPROVED);
+        job.setApplicationMethod(com.internlink.core.shared.enums.ApplicationMethod.EXTERNAL);
+        job.setExternalApplyEmail("hiring@example.com");
+        when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
+        when(jobRepository.findById(job.getId())).thenReturn(Optional.of(job));
+
+        JobApplicationRequest request =
+                JobApplicationRequest.builder()
+                        .jobId(job.getId())
+                        .submittedCvDocumentId(UUID.randomUUID())
+                        .build();
+
+        assertThatThrownBy(() -> applicationService.applyJob(student.getId(), request))
+                .isInstanceOf(com.internlink.core.shared.error.AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(com.internlink.core.shared.error.ErrorCode.JOB_APPLY_EXTERNAL_ONLY);
+        verify(applicationRepository, never()).save(any());
+    }
+
+    @Test
     void applyJobRejectsCvOwnedByAnotherUser() {
         User student = user(UserRole.STUDENT);
         JobPosition job = job(company(), term(department()), department(), JobStatus.APPROVED);

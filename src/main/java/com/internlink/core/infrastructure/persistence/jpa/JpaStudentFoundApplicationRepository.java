@@ -14,6 +14,7 @@ public interface JpaStudentFoundApplicationRepository extends JpaRepository<Stud
     List<StudentFoundApplication> findByStudentId(UUID studentId);
     Optional<StudentFoundApplication> findByTermIdAndStudentId(UUID termId, UUID studentId);
     Optional<StudentFoundApplication> findByAgreementId(UUID agreementId);
+    long countBySourceJobId(UUID sourceJobId);
     List<StudentFoundApplication> findByTermIdAndStatus(UUID termId, String status);
     List<StudentFoundApplication> findByStatusInOrderByUpdatedAtDesc(Collection<String> statuses);
 }

@@ -12,6 +12,8 @@ import com.internlink.core.shared.enums.DocumentType;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.JobType;
 import com.internlink.core.shared.enums.TermStatus;
+import com.internlink.core.shared.error.AppException;
+import com.internlink.core.shared.error.ErrorCode;
 import com.internlink.core.shared.exception.BadRequestException;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
 import com.internlink.core.shared.security.TermGuard;
@@ -32,6 +34,8 @@ public class JobApplicationSubmissionValidator {
     private final JpaPlacementOfferRepository offers;
 
     public Document validate(UUID studentId, JobApplicationRequest request, JobPosition job) {
+        if (job.isExternalApply())
+            throw new AppException(ErrorCode.JOB_APPLY_EXTERNAL_ONLY);
         if (job.getStatus() != JobStatus.APPROVED || job.getClosedEarlyAt() != null)
             throw new BadRequestException("Vị trí tuyển dụng chưa được Khoa phê duyệt hoặc đã đóng nhận hồ sơ");
         OffsetDateTime now = OffsetDateTime.now();

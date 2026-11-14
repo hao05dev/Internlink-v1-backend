@@ -4,6 +4,7 @@ import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.company.Company;
 import com.internlink.core.domain.organization.InternshipTerm;
 import com.internlink.core.shared.domain.BaseEntity;
+import com.internlink.core.shared.enums.ApplicationMethod;
 import com.internlink.core.shared.enums.JobStatus;
 import com.internlink.core.shared.enums.JobType;
 import com.internlink.core.shared.enums.WorkFormat;
@@ -112,6 +113,30 @@ public class JobPosition extends BaseEntity {
 
     @Column(name = "approved_at")
     private OffsetDateTime approvedAt;
+
+    /** IN_APP: nộp trong hệ thống; EXTERNAL: nộp qua kênh riêng của DN (xem các cột external_apply_*). */
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(name = "application_method", nullable = false, length = 20)
+    private ApplicationMethod applicationMethod = ApplicationMethod.IN_APP;
+
+    @Column(name = "external_apply_url", columnDefinition = "text")
+    private String externalApplyUrl;
+
+    @Column(name = "external_apply_email")
+    private String externalApplyEmail;
+
+    /** Tiêu đề email DN yêu cầu, dùng để điền sẵn vào liên kết mailto. */
+    @Column(name = "external_apply_subject")
+    private String externalApplySubject;
+
+    /** Hướng dẫn nộp hồ sơ: hồ sơ cần gửi, hạn, nơi nộp trực tiếp... */
+    @Column(name = "external_apply_note", columnDefinition = "text")
+    private String externalApplyNote;
+
+    public boolean isExternalApply() {
+        return applicationMethod == ApplicationMethod.EXTERNAL;
+    }
 
     /** User tạo vị trí thực tập (COMPANY_REP). Dùng để kiểm tra quyền ký thỏa thuận. */
     @ManyToOne(fetch = FetchType.LAZY)
