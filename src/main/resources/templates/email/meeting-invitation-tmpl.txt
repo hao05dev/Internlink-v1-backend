@@ -1,0 +1,11 @@
+Xin chào [(${recipientName})],
+
+[(${organizerName})] [(${intro})]
+
+Nội dung: [(${title})]
+Thời gian: [(${scheduledAt})] ([(${duration})])
+[# th:if="${!cancelled}"]Google Meet: [(${meetUrl})]
+[/][# th:if="${!#strings.isEmpty(agenda)}"]Chương trình: [(${agenda})]
+[/][# th:if="${cancelled and !#strings.isEmpty(cancelReason)}"]Lý do hủy: [(${cancelReason})]
+[/]
+Xem tất cả cuộc họp của bạn: [(${actionUrl})]

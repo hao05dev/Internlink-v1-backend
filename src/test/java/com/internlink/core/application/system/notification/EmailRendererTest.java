@@ -78,4 +78,25 @@ class EmailRendererTest {
         assertThatThrownBy(() -> renderer.render(EmailTemplate.FORGOT_PASSWORD, Map.of("fullName", "An")))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void meetingInvitationShowsJoinLinkUnlessCancelled() {
+        Map<String, Object> values = sample(EmailTemplate.MEETING_INVITATION);
+        values.put("heading", "Lời mời họp");
+        values.put("title", "Báo cáo tuần 3");
+        values.put("meetUrl", "https://meet.google.com/abc-defg-hij");
+        values.put("cancelled", false);
+        var invite = renderer.render(EmailTemplate.MEETING_INVITATION, values);
+
+        assertThat(invite.subject()).contains("Lời mời họp: Báo cáo tuần 3");
+        assertThat(invite.html()).contains("href=\"https://meet.google.com/abc-defg-hij\"").contains("Tham gia Google Meet");
+        assertThat(invite.text()).contains("Google Meet: https://meet.google.com/abc-defg-hij");
+
+        values.put("cancelled", true);
+        values.put("cancelReason", "Trùng lịch");
+        var cancelled = renderer.render(EmailTemplate.MEETING_INVITATION, values);
+
+        assertThat(cancelled.html()).doesNotContain("meet.google.com").contains("Trùng lịch");
+        assertThat(cancelled.text()).doesNotContain("meet.google.com").contains("Lý do hủy: Trùng lịch");
+    }
 }

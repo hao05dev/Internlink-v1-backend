@@ -34,32 +34,7 @@ public class NotificationReminderService {
                                                     if (!source.stillPending(candidate, now)
                                                             || !source.reserve(candidate.key()))
                                                         return false;
-                                                    String message =
-                                                            candidate.type().startsWith("SYSTEM_")
-                                                                    ? "Có lỗi vận hành cần kiểm tra"
-                                                                          + " trong trang quản trị."
-                                                                    : "Thời điểm cần xử lý: "
-                                                                            + DISPLAY.format(
-                                                                                    candidate
-                                                                                            .dueAt())
-                                                                            + (candidate
-                                                                                            .dueAt()
-                                                                                            .isBefore(
-                                                                                                    now)
-                                                                                    ? ". Công việc"
-                                                                                          + " vẫn chưa"
-                                                                                          + " hoàn"
-                                                                                          + " thành;"
-                                                                                          + " hãy kiểm"
-                                                                                          + " tra hồ"
-                                                                                          + " sơ."
-                                                                                    : ". Hãy kiểm"
-                                                                                          + " tra công"
-                                                                                          + " việc"
-                                                                                          + " trước"
-                                                                                          + " thời"
-                                                                                          + " điểm"
-                                                                                          + " này.");
+                                                    String message = message(candidate, now);
                                                 notifications.publishNotification(
                                                         candidate.recipientId(),
                                                         candidate.type(),
@@ -80,5 +55,19 @@ public class NotificationReminderService {
             }
         }
         return count;
+    }
+
+    static String message(ReminderCandidate candidate, OffsetDateTime now) {
+        if (candidate.type().startsWith("SYSTEM_")) {
+            return "Có lỗi vận hành cần kiểm tra trong trang quản trị.";
+        }
+        String when = DISPLAY.format(candidate.dueAt());
+        if ("MEETING_REMINDER".equals(candidate.type())) {
+            return "Cuộc họp bắt đầu lúc " + when + ". Mở trang Cuộc họp để lấy link Google Meet.";
+        }
+        return "Thời điểm cần xử lý: " + when
+                + (candidate.dueAt().isBefore(now)
+                        ? ". Công việc vẫn chưa hoàn thành; hãy kiểm tra hồ sơ."
+                        : ". Hãy kiểm tra công việc trước thời điểm này.");
     }
 }

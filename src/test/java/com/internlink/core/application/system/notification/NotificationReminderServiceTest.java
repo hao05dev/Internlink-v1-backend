@@ -65,4 +65,14 @@ class NotificationReminderServiceTest {
                         anyString(),
                         eq(true));
     }
+
+    @Test
+    void meetingReminderShowsStartTimeInVietnamTime() {
+        var start = OffsetDateTime.parse("2026-12-01T02:00:00Z");
+        var candidate = new ReminderCandidate(
+                "k", UUID.randomUUID(), "MEETING_REMINDER", "Sắp đến giờ họp: Tuần 3", "/student/meetings", start);
+
+        assertThat(NotificationReminderService.message(candidate, start.minusHours(20)))
+                .isEqualTo("Cuộc họp bắt đầu lúc 01/12/2026 09:00. Mở trang Cuộc họp để lấy link Google Meet.");
+    }
 }

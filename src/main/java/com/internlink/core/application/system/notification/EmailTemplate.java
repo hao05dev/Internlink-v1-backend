@@ -29,6 +29,21 @@ public enum EmailTemplate {
                     "interviewer",
                     "notes",
                     "actionUrl")),
+    MEETING_INVITATION(
+            "meeting-invitation-tmpl",
+            Set.of(
+                    "heading",
+                    "intro",
+                    "cancelled",
+                    "recipientName",
+                    "organizerName",
+                    "title",
+                    "scheduledAt",
+                    "duration",
+                    "meetUrl",
+                    "agenda",
+                    "cancelReason",
+                    "actionUrl")),
     NOTIFICATION("notification-tmpl", Set.of("title", "message", "actionUrl", "preferencesUrl")),
     CAMPAIGN("campaign-tmpl", Set.of("subject", "body"));
 

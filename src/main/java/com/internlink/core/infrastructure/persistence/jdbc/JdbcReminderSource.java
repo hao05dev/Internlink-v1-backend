@@ -125,6 +125,13 @@ WITH placements AS (
     FROM placements p JOIN users u ON u.department_id=p.department_id AND u.role='FACULTY_ADMIN'
     WHERE NOT EXISTS(SELECT 1 FROM final_results f WHERE f.placement_id=p.id AND f.published_at IS NOT NULL)
     UNION ALL
+    SELECT a.user_id,m.id::text,'MEETING_REMINDER','Sắp đến giờ họp: '||m.title,'/student/meetings',m.start_at
+    FROM meetings m JOIN meeting_attendees a ON a.meeting_id=m.id
+    WHERE m.status='SCHEDULED' AND m.start_at>CURRENT_TIMESTAMP
+    UNION ALL
+    SELECT m.organizer_id,m.id::text,'MEETING_REMINDER','Sắp đến giờ họp: '||m.title,'/lecturer/meetings',m.start_at
+    FROM meetings m WHERE m.status='SCHEDULED' AND m.start_at>CURRENT_TIMESTAMP
+    UNION ALL
     SELECT u.id,'email/'||CURRENT_DATE::text,'SYSTEM_EMAIL_ERROR','Có email cần đối soát','/admin/notifications/email',CURRENT_DATE::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
     FROM users u WHERE u.role='ADMIN' AND EXISTS(SELECT 1 FROM email_outbox WHERE status IN ('FAILED','UNKNOWN')
         AND created_at>CURRENT_TIMESTAMP-INTERVAL '24 hours')
