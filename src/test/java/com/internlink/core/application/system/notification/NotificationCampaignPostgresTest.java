@@ -136,12 +136,16 @@ class NotificationCampaignPostgresTest {
                         .claimedUser(student)
                         .build());
         login(faculty);
+        // Không phụ thuộc .env của máy dev: CI mặc định delivery-mode=DISABLED.
         email.setEnabled(true);
+        email.setDeliveryMode("REDIRECT");
+        email.setRedirectTo("redirect-test@example.edu");
     }
 
     @AfterEach
     void cleanup() {
         email.setEnabled(false);
+        email.setDeliveryMode("DISABLED");
         SecurityContextHolder.clearContext();
         jdbc.execute("DROP TRIGGER IF EXISTS reject_campaign_test ON email_outbox");
         jdbc.execute("DROP FUNCTION IF EXISTS reject_campaign_test()");
