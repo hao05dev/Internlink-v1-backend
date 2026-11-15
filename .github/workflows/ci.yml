@@ -15,12 +15,31 @@ permissions:
 
 jobs:
   test:
-    name: mvn verify (JDK 21)
+    name: mvn verify (JDK 21, H2 + PostgreSQL 16)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    # Các test *PostgresTest cần INTERNLINK_TEST_PG_URL nên tự bỏ qua ở đây;
-    # phần còn lại chạy trên H2 và không cần biến môi trường nào.
+    # Phần lớn test chạy trên H2. Các lớp *PostgresTest chỉ chạy khi có
+    # INTERNLINK_TEST_PG_URL: mỗi lớp tạo database riêng và chạy toàn bộ
+    # migration Flyway trên PostgreSQL 16 + pgvector thật.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: internlink_test
+          POSTGRES_DB: internlink_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U internlink_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      INTERNLINK_TEST_PG_URL: jdbc:postgresql://localhost:5432/internlink_test
+
     steps:
       - uses: actions/checkout@v4
 

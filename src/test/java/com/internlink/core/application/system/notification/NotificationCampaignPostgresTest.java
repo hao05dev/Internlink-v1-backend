@@ -12,6 +12,7 @@ import com.internlink.core.infrastructure.security.CustomUserDetail;
 import com.internlink.core.presentation.system.dto.request.NotificationCampaignRequest;
 import com.internlink.core.shared.enums.*;
 import com.internlink.core.shared.security.SecurityGuard;
+import com.internlink.core.support.PostgresTestDatabase;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -20,7 +21,6 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.annotation.DirtiesContext;
@@ -44,6 +44,7 @@ import java.util.*;
     EmailProperties.class,
     EmailRecipientPolicy.class,
     NotificationEmailComposer.class,
+    EmailRenderer.class,
     JdbcEmailOutboxStore.class,
     JdbcReminderSource.class,
     com.internlink.core.infrastructure.persistence.jdbc.NotificationEventRepository.class,
@@ -52,7 +53,9 @@ import java.util.*;
     NotificationCampaignDeliveryService.class,
     SecurityGuard.class,
     AuditLogServiceImpl.class,
-    NotificationReminderService.class
+    NotificationReminderService.class,
+    com.internlink.core.infrastructure.persistence.jdbc.NotificationCampaignAudienceRepository.class,
+    com.internlink.core.application.organization.TermDepartmentScope.class
 })
 @EnabledIfEnvironmentVariable(named = "INTERNLINK_TEST_PG_URL", matches = ".+")
 @DirtiesContext
@@ -60,15 +63,7 @@ import java.util.*;
 class NotificationCampaignPostgresTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry properties) {
-        String url = System.getenv("INTERNLINK_TEST_PG_URL"),
-                schema = "campaign_test_" + UUID.randomUUID().toString().replace("-", "");
-        new JdbcTemplate(new DriverManagerDataSource(url, "internlink_test", ""))
-                .execute("CREATE SCHEMA " + schema);
-        properties.add("spring.datasource.url", () -> url + "?currentSchema=" + schema);
-        properties.add("spring.datasource.username", () -> "internlink_test");
-        properties.add("spring.datasource.password", () -> "");
-        properties.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        properties.add("spring.flyway.schemas", () -> schema);
+        PostgresTestDatabase.register(properties, "campaign_test");
     }
 
     @Autowired JpaUserRepository users;
@@ -234,7 +229,7 @@ class NotificationCampaignPostgresTest {
         var campaign = service.create(request("Rollback fixture", UUID.randomUUID()));
         jdbc.execute(
                 "CREATE FUNCTION reject_campaign_test() RETURNS trigger LANGUAGE plpgsql AS $$"
-                    + " BEGIN IF NEW.subject='Rollback fixture' THEN RAISE EXCEPTION 'fixture'; END"
+                    + " BEGIN IF NEW.subject LIKE '%Rollback fixture' THEN RAISE EXCEPTION 'fixture'; END"
                     + " IF; RETURN NEW; END $$");
         jdbc.execute(
                 "CREATE TRIGGER reject_campaign_test BEFORE INSERT ON email_outbox FOR EACH ROW"
