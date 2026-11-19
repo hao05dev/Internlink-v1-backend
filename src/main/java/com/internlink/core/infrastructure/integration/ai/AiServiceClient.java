@@ -33,11 +33,20 @@ public class AiServiceClient {
     }
 
     public Map<String, Object> infer(String endpoint, Map<String, Object> body) {
+        return infer(endpoint, body, Duration.ofSeconds(20));
+    }
+
+    /** Trợ lý CapyLink: có thể gọi embedding + LLM nên cho thời gian dài hơn một lượt suy luận thường. */
+    public Map<String, Object> assistantChat(Map<String, Object> body) {
+        return infer("/api/v1/assistant/chat", body, Duration.ofSeconds(35));
+    }
+
+    private Map<String, Object> infer(String endpoint, Map<String, Object> body, Duration timeout) {
         try {
             return webClient.post().uri(endpoint).header("X-InternLink-AI-Key", serviceApiKey)
                 .bodyValue(body).retrieve()
                 .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .timeout(Duration.ofSeconds(20)).blockOptional()
+                .timeout(timeout).blockOptional()
                 .orElse(Map.of("status", "FAILED", "error_code", "empty_response"));
         } catch (WebClientResponseException ex) {
             // Return only known parser errors, never an upstream message containing CV text.
@@ -66,6 +75,12 @@ public class AiServiceClient {
     public Map<String, Object> extractDocument(String name, String base64, boolean allowCloud) {
         return infer("/api/v1/skills/extract-document",
             Map.of("filename", name, "content_base64", base64, "allow_cloud", allowCloud));
+    }
+
+    /** Tách chữ tài liệu cho kho tri thức CapyLink; PDF lớn có thể mất vài giây nên cho thời gian chờ dài hơn. */
+    public Map<String, Object> extractKnowledge(String name, String base64, String title) {
+        return infer("/api/v1/assistant/extract-knowledge",
+            Map.of("filename", name, "content_base64", base64, "title", title == null ? "" : title), Duration.ofSeconds(60));
     }
 
     public Map<String, Object> parseRubric(String name, String base64) {

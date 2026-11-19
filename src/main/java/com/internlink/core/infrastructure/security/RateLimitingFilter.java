@@ -84,7 +84,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         if (path.startsWith("/api/v1/documents/uploads")) {
             return RateLimiterService.LimitCategory.UPLOAD;
         }
-        if (path.startsWith("/api/v1/ai-matching") || path.startsWith("/api/v1/ai-workspace")) {
+        if (path.startsWith("/api/v1/ai-matching") || path.startsWith("/api/v1/ai-workspace")
+                || path.startsWith("/api/v1/assistant")) {
             return RateLimiterService.LimitCategory.AI;
         }
         return null;
