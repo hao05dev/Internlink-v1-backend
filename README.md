@@ -87,6 +87,46 @@ Tất cả tài khoản seed dùng mật khẩu chung: **`Password@123`** — đ
 | COMPANY_REP | `tuyendung.fptct@fpt.com` (tab "Doanh nghiệp") | `/company/dashboard` |
 | COMPANY_MENTOR | `mentor.nam@fpt.com` (tab "Doanh nghiệp") | `/mentor/dashboard` |
 
+### Bộ dữ liệu demo đầy đủ (đợt "HK1 2026–2027 (Demo)")
+
+Nạp bằng `psql -d internlink_db -f ../scripts/seed_demo_full.sql` (chạy lại an toàn), xoá bằng `../scripts/reset_demo.sql`. Sinh lại từ `scripts/demo_data/build_demo.py`. Cùng mật khẩu chung ở trên. Gồm 60 SV, 8 GV, 12 doanh nghiệp, 48 tin tuyển, 78 đơn ứng tuyển, 34 đợt thực tập (đang thực tập / hoàn thành / chấm dứt), nhật ký tuần–ngày, phiếu đánh giá, 14 bài cẩm nang có ảnh bìa, thông báo, cuộc họp.
+
+| Vai trò | Email | Tình huống |
+|---|---|---|
+| STUDENT | `b2398034@demo.internlink.vn` | Đang thực tập tại MediMekong, đã có 8 nhật ký tuần |
+| STUDENT | `b2398055@demo.internlink.vn` | Đã hoàn thành, có kết quả cuối |
+| STUDENT | `b2398007@demo.internlink.vn` | Đang ứng tuyển, chưa có nơi thực tập |
+| LECTURER | `gv.hoangphuc@demo.internlink.vn` | GVHD của `b2398034` |
+| LECTURER | `gv.baotran@demo.internlink.vn` | GVHD của `b2398055` |
+| COMPANY_REP | `tuyendung.medimekong@demo.internlink.vn` | Doanh nghiệp MediMekong |
+| COMPANY_MENTOR | `mentor.mai19.medimekong@demo.internlink.vn` | Mentor của `b2398034` |
+| FACULTY_ADMIN | `khoa@demo.internlink.vn` | Ban quản lý Khoa |
+| SCHOOL_OFFICE | `vanphongtruong@demo.internlink.vn` | Văn phòng Trường |
+
+Danh sách đầy đủ (đuôi `@demo.internlink.vn`, cùng mật khẩu chung):
+
+- **Giảng viên (8)**: `gv.thanhtam`, `gv.hoangphuc`, `gv.minhthu`, `gv.quockhanh`, `gv.ngocdiem`, `gv.ducthinh`, `gv.baotran`, `gv.huuloc` — mỗi GV có 7–8 SV trong danh sách, 4–5 SV đã có nơi thực tập.
+- **Doanh nghiệp (12)**: `tuyendung.<slug>` với slug là `songhau`, `mekongdata`, `ninhkieudigital`, `phusapay`, `cuulongsecure`, `taydocloud`, `chonoi`, `luavangedu`, `dongbangxanh`, `hoasengames`, `medimekong`, `cairanglogistics`.
+- **Mentor**: `mentor.<tên><số>.<slug>`, ví dụ `mentor.phat01.songhau`, `mentor.mai19.medimekong`, `mentor.tri20.cairanglogistics` (mỗi DN 1–2 mentor).
+- **Sinh viên (60)**: `b23980NN` (MSSV B2398001–B2398060), theo trạng thái:
+
+| MSSV | Trạng thái |
+|---|---|
+| 001–006 | Chưa ứng tuyển |
+| 007–014 | Đang ứng tuyển |
+| 015–020 | Đang phỏng vấn |
+| 021–024 | Có offer chờ phản hồi |
+| 025 | Thỏa thuận 3 bên chờ ký |
+| 026–027 | Phiếu tiếp nhận (tự tìm) chờ duyệt |
+| 028–029 | Chuẩn bị thực tập (bắt đầu 23/11/2026) |
+| 030–033 | Tự tìm nơi thực tập, đã được duyệt |
+| 034–054 | Đang thực tập tại DN đối tác (040: sự cố vắng mặt, 045: chuyển đơn vị, 052: chấm dứt sớm) |
+| 055–060 | Đã kết thúc (059: chờ GV chấm, 060: không đạt) |
+
+Ngày "hôm nay" của kịch bản là 18/11/2026. Ảnh và PDF demo nằm trên R2 dưới `media/demo/` và `private/documents/demo/`; sinh lại và tải lên bằng `python scripts/demo_data/build_demo.py --upload` (đọc khóa R2 từ `.env`). `reset_demo.sql` không xoá file trên R2.
+
+Lưu ý: seed chuyển kỳ gốc `HK2-2026-2027` (bắt đầu 15/02/2027) từ ACTIVE sang REGISTRATION_OPEN, để kỳ demo là kỳ ACTIVE duy nhất và được dashboard Khoa/VP Trường chọn mặc định. `reset_demo.sql` trả kỳ gốc về ACTIVE.
+
 Các tài khoản này chỉ dành cho môi trường phát triển. Khi triển khai thật, hãy đổi mật khẩu hoặc bỏ migration seed.
 
 ---
