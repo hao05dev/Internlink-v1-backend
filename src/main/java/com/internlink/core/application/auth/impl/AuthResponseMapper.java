@@ -17,6 +17,6 @@ public final class AuthResponseMapper {
                 .departmentId(user.getDepartment() == null ? null : user.getDepartment().getId())
                 .companyId(user.getCompany() == null ? null : user.getCompany().getId())
                 .mustChangePassword(user.getMustChangePassword()).lastLoginAt(user.getLastLoginAt())
-                .isActive(user.getIsActive()).build();
+                .isActive(user.getIsActive()).googleLinked(user.getGoogleSubject() != null).build();
     }
 }

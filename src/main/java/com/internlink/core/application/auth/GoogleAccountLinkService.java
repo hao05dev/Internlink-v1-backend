@@ -19,13 +19,26 @@ public class GoogleAccountLinkService {
     public void link(UUID userId, String token) {
         var identity = verifier.verify(token);
         var user = users.findByIdForUpdate(userId).orElseThrow(() -> new UnauthorizedException("Tài khoản không hợp lệ"));
-        if (!identity.emailVerified() || !identity.email().equalsIgnoreCase(user.getEmail())
-                || !Boolean.TRUE.equals(user.getIsActive()) || Boolean.TRUE.equals(user.getMustChangePassword())
-                || user.getGoogleSubject() != null && !user.getGoogleSubject().equals(identity.sub())) {
-            throw new UnauthorizedException("Không thể liên kết danh tính Google này");
+        if (!identity.emailVerified() || !identity.email().equalsIgnoreCase(user.getEmail())) {
+            throw new UnauthorizedException("Email Google (" + identity.email()
+                    + ") không trùng với email tài khoản. Hãy chọn đúng tài khoản " + user.getEmail() + ".");
+        }
+        if (!Boolean.TRUE.equals(user.getIsActive()) || Boolean.TRUE.equals(user.getMustChangePassword())) {
+            throw new UnauthorizedException("Hãy đổi mật khẩu lần đầu trước khi liên kết Google.");
+        }
+        if (user.getGoogleSubject() != null && !user.getGoogleSubject().equals(identity.sub())) {
+            throw new UnauthorizedException("Tài khoản đã liên kết với một danh tính Google khác. Hãy huỷ liên kết trước.");
         }
         user.setGoogleSubject(identity.sub());
         user.setEmailVerifiedAt(OffsetDateTime.now());
+        users.saveAndFlush(user);
+    }
+
+    @Transactional
+    public void unlink(UUID userId) {
+        var user = users.findByIdForUpdate(userId).orElseThrow(() -> new UnauthorizedException("Tài khoản không hợp lệ"));
+        if (user.getGoogleSubject() == null) return;
+        user.setGoogleSubject(null);
         users.saveAndFlush(user);
     }
 }

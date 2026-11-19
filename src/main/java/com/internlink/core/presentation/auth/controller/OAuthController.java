@@ -35,6 +35,15 @@ public class OAuthController {
         return ResponseEntity.ok(ApiResponse.success("Đã liên kết Google", null));
     }
 
+    @org.springframework.web.bind.annotation.DeleteMapping("/google/link")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> unlink(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.internlink.core.infrastructure.security.CustomUserDetail principal) {
+        googleLinks.unlink(principal.getId());
+        return ResponseEntity.ok(ApiResponse.success("Đã huỷ liên kết Google", null));
+    }
+
     @PostMapping("/google")
     public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request,

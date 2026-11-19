@@ -61,7 +61,7 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
 
         // Only a previously linked subject can authenticate; email alone cannot link roles.
         User user = userRepository.findByGoogleSubject(googleUser.sub())
-                .orElseThrow(() -> new UnauthorizedException("Tài khoản chưa liên kết Google. Vui lòng đăng nhập bằng mật khẩu."));
+                .orElseThrow(() -> new UnauthorizedException("Tài khoản Google này chưa được liên kết. Hãy đăng nhập bằng email và mật khẩu, rồi bấm \"Liên kết Google\" ở thanh trên cùng để lần sau đăng nhập bằng Google."));
         if (!Boolean.TRUE.equals(user.getIsActive())) {
             throw new UnauthorizedException("Tài khoản của bạn đã bị khóa hoặc chưa kích hoạt");
         }

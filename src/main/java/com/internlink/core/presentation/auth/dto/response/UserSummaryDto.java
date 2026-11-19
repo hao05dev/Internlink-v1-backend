@@ -26,4 +26,6 @@ public class UserSummaryDto {
     private Boolean mustChangePassword;
     private OffsetDateTime lastLoginAt;
     private Boolean isActive;
+    /** Tài khoản đã liên kết danh tính Google (đăng nhập Google được). */
+    private Boolean googleLinked;
 }

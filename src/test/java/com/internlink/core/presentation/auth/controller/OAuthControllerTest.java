@@ -32,11 +32,14 @@ class OAuthControllerTest {
     @Mock
     private HttpServletResponse response;
 
+    @Mock
+    private com.internlink.core.application.auth.GoogleAccountLinkService googleLinks;
+
     private OAuthController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new OAuthController(googleAuthService, mock(com.internlink.core.application.auth.GoogleAccountLinkService.class));
+        controller = new OAuthController(googleAuthService, googleLinks);
     }
 
     @Test
@@ -57,5 +60,17 @@ class OAuthControllerTest {
         assertThat(result.getBody()).isNotNull();
         assertThat(result.getBody().getData()).isEqualTo(authResponse);
         verify(googleAuthService).authenticateWithGoogle(request, httpRequest, response);
+    }
+
+    @Test
+    void shouldUnlinkGoogleForCurrentUser() {
+        UUID userId = UUID.randomUUID();
+        var principal = mock(com.internlink.core.infrastructure.security.CustomUserDetail.class);
+        when(principal.getId()).thenReturn(userId);
+
+        var result = controller.unlink(principal);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(googleLinks).unlink(userId);
     }
 }
