@@ -23,11 +23,23 @@ public interface EmailOutboxStore {
     boolean finish(
             EmailDelivery row, String result, String error, String providerId, OffsetDateTime next);
 
-    Map<String, Long> summary();
+    /** @param departmentViewerId null = toàn hệ thống; khác null = chỉ email thuộc khoa của người xem. */
+    Map<String, Long> summary(java.util.UUID departmentViewerId);
 
-    EmailDeliveryResponse.Metrics metrics();
+    EmailDeliveryResponse.Metrics metrics(java.util.UUID departmentViewerId);
+
+    default Map<String, Long> summary() {
+        return summary(null);
+    }
+
+    default EmailDeliveryResponse.Metrics metrics() {
+        return metrics(null);
+    }
 
     EmailDeliveryResponse.Page page(EmailDeliveryFilter filter, int page, int size);
+
+    /** Email {@code id} có thuộc khoa của người xem không. */
+    boolean visibleTo(java.util.UUID id, java.util.UUID departmentViewerId);
 
     EmailDeliveryResponse.Controls controls();
 

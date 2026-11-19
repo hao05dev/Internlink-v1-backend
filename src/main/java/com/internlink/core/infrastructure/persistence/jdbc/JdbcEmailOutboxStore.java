@@ -138,29 +138,55 @@ WHERE id=? AND status='SENDING' AND lease_token=?
                         }));
     }
 
-    public Map<String, Long> summary() {
+    /** Email gửi tới người cùng khoa với người xem, hoặc gửi theo phạm vi khoa đó. */
+    private static final String DEPARTMENT_SCOPE =
+            "(recipient_user_id IN (SELECT u.id FROM users u WHERE u.department_id=(SELECT department_id FROM users WHERE id=?))"
+                    + " OR (scope_type='DEPARTMENT' AND scope_id=(SELECT department_id FROM users WHERE id=?)))";
+
+    private static String scopeWhere(UUID viewer) {
+        return viewer == null ? "" : " WHERE " + DEPARTMENT_SCOPE;
+    }
+
+    private static Object[] scopeArgs(UUID viewer) {
+        return viewer == null ? new Object[0] : new Object[] {viewer, viewer};
+    }
+
+    public boolean visibleTo(UUID id, UUID viewer) {
+        Long count =
+                jdbc.queryForObject(
+                        "SELECT count(*) FROM email_outbox WHERE id=? AND " + DEPARTMENT_SCOPE,
+                        Long.class,
+                        id,
+                        viewer,
+                        viewer);
+        return count != null && count > 0;
+    }
+
+    public Map<String, Long> summary(UUID viewer) {
         Map<String, Long> result = new LinkedHashMap<>();
         jdbc.query(
-                "SELECT status,count(*) AS amount FROM email_outbox GROUP BY status",
+                "SELECT status,count(*) AS amount FROM email_outbox" + scopeWhere(viewer) + " GROUP BY status",
                 (org.springframework.jdbc.core.RowCallbackHandler)
-                        rs -> result.put(rs.getString("status"), rs.getLong("amount")));
+                        rs -> result.put(rs.getString("status"), rs.getLong("amount")),
+                scopeArgs(viewer));
         return result;
     }
 
-    public EmailDeliveryResponse.Metrics metrics() {
+    public EmailDeliveryResponse.Metrics metrics(UUID viewer) {
         return jdbc.queryForObject(
                 """
 SELECT greatest(0,extract(epoch FROM CURRENT_TIMESTAMP-min(created_at) FILTER (WHERE status IN ('PENDING','RETRY','SENDING')))) AS oldest_seconds,
     avg(greatest(0,extract(epoch FROM sent_at-created_at))) FILTER (WHERE status IN ('ACCEPTED','DELIVERED','BOUNCED') AND sent_at>=CURRENT_TIMESTAMP-INTERVAL '24 hours') AS average_seconds
 FROM email_outbox
-""",
+""" + scopeWhere(viewer),
                 (rs, index) -> {
                     Number oldest = (Number) rs.getObject("oldest_seconds");
                     Number average = (Number) rs.getObject("average_seconds");
                     return new EmailDeliveryResponse.Metrics(
                             oldest == null ? null : oldest.longValue(),
                             average == null ? null : average.doubleValue());
-                });
+                },
+                scopeArgs(viewer));
     }
 
     public EmailDeliveryResponse.Controls controls() {
@@ -202,6 +228,11 @@ FROM email_outbox
         if (filter.recipient() != null && !filter.recipient().isBlank()) {
             clauses.add("lower(recipient_email) LIKE ?");
             args.add("%" + filter.recipient().strip().toLowerCase(Locale.ROOT) + "%");
+        }
+        if (filter.departmentViewerId() != null) {
+            clauses.add(DEPARTMENT_SCOPE);
+            args.add(filter.departmentViewerId());
+            args.add(filter.departmentViewerId());
         }
         String where = clauses.isEmpty() ? "" : " WHERE " + String.join(" AND ", clauses);
         long count =

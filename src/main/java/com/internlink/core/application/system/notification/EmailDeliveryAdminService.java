@@ -5,6 +5,7 @@ import com.internlink.core.infrastructure.integration.email.EmailProperties;
 import com.internlink.core.presentation.system.dto.response.EmailDeliveryResponse;
 import com.internlink.core.shared.enums.UserRole;
 import com.internlink.core.shared.exception.BadRequestException;
+import com.internlink.core.shared.exception.ForbiddenException;
 import com.internlink.core.shared.security.SecurityGuard;
 
 import lombok.RequiredArgsConstructor;
@@ -23,19 +24,26 @@ public class EmailDeliveryAdminService {
     private final AuditLogService audit;
 
     public EmailDeliveryResponse.Summary summary() {
-        guard.requireRole(UserRole.ADMIN);
+        UUID viewer = departmentViewer();
         return new EmailDeliveryResponse.Summary(
                 settings.isEnabled(),
                 settings.getProvider(),
-                store.summary(),
+                store.summary(viewer),
                 store.controls(),
-                store.metrics());
+                store.metrics(viewer));
+    }
+
+    /** Admin xem toàn hệ thống (null); Khoa chỉ xem email thuộc khoa mình. */
+    private UUID departmentViewer() {
+        guard.requireRole(UserRole.ADMIN, UserRole.FACULTY_ADMIN);
+        var user = guard.currentUser();
+        return user.getRole() == UserRole.ADMIN ? null : user.getId();
     }
 
     public EmailDeliveryResponse.Page page(
             String status, String scopeType, String sourceType, String templateKey,
             String recipient, int page, int size) {
-        guard.requireRole(UserRole.ADMIN);
+        UUID viewer = departmentViewer();
         if (status != null
                 && !status.isBlank()
                 && !Set.of(
@@ -57,12 +65,13 @@ public class EmailDeliveryAdminService {
         if (templateKey != null && templateKey.length() > 60)
             throw new BadRequestException("Mẫu email không hợp lệ");
         return store.page(
-                new EmailDeliveryFilter(status, scopeType, sourceType, templateKey, recipient),
+                new EmailDeliveryFilter(status, scopeType, sourceType, templateKey, recipient, viewer),
                 Math.max(0, page), Math.max(1, Math.min(100, size)));
     }
 
     @Transactional
     public EmailDeliveryResponse.Controls controls(boolean paused, int limit, String reason) {
+        guard.requireRole(UserRole.ADMIN);
         requireReason(reason);
         if (limit < 1 || limit > 2000)
             throw new BadRequestException("Giới hạn gửi cần từ 1 đến 2.000 lượt trong 24 giờ");
@@ -80,6 +89,7 @@ public class EmailDeliveryAdminService {
 
     @Transactional
     public void retry(UUID id, boolean confirmedNotAccepted, String reason) {
+        requireVisible(id);
         requireReason(reason);
         if (!store.retry(id, confirmedNotAccepted))
             throw new BadRequestException(
@@ -96,6 +106,7 @@ public class EmailDeliveryAdminService {
 
     @Transactional
     public void cancel(UUID id, String reason) {
+        requireVisible(id);
         requireReason(reason);
         if (!store.cancel(id))
             throw new BadRequestException("Không thể hủy email đã gửi hoặc đang được xử lý");
@@ -109,8 +120,13 @@ public class EmailDeliveryAdminService {
                 null);
     }
 
+    private void requireVisible(UUID id) {
+        UUID viewer = departmentViewer();
+        if (viewer != null && !store.visibleTo(id, viewer))
+            throw new ForbiddenException("Email này không thuộc phạm vi khoa của bạn");
+    }
+
     private void requireReason(String reason) {
-        guard.requireRole(UserRole.ADMIN);
         if (reason == null || reason.isBlank() || reason.length() > 500)
             throw new BadRequestException("Cần lý do thao tác, tối đa 500 ký tự");
     }
