@@ -58,9 +58,6 @@ public class StudentProfile {
     @Column(name = "preferences", columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> preferences = Map.of();
 
-    @Column(name = "github_url")
-    private String githubUrl;
-
     @Column(name = "bio", columnDefinition = "text")
     private String bio;
 

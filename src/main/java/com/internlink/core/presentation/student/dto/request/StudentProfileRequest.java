@@ -30,7 +30,6 @@ public class StudentProfileRequest {
     @DecimalMax(value = "4.0", message = "GPA tối đa là 4.0")
     private BigDecimal gpa;
 
-    private String githubUrl;
     private String bio;
 
     @Builder.Default

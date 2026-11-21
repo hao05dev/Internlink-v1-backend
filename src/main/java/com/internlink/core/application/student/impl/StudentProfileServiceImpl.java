@@ -97,7 +97,6 @@ public class StudentProfileServiceImpl implements StudentProfileService {
         profile.setProgram(program);
         profile.setStudentCode(studentCode);
         profile.setGpa(request.getGpa());
-        profile.setGithubUrl(request.getGithubUrl());
         profile.setBio(request.getBio());
         profile.setCertificates(request.getCertificates() != null ? request.getCertificates() : java.util.List.of());
         profile.setPassedCourses(request.getPassedCourses() != null ? request.getPassedCourses() : java.util.List.of());
@@ -134,7 +133,6 @@ public class StudentProfileServiceImpl implements StudentProfileService {
             .programName(entity.getProgram().getName())
             .departmentName(entity.getProgram().getDepartment().getName())
             .gpa(entity.getGpa())
-            .githubUrl(entity.getGithubUrl())
             .bio(entity.getBio())
             .certificates(entity.getCertificates())
             .passedCourses(entity.getPassedCourses())

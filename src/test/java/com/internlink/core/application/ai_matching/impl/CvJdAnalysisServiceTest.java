@@ -111,7 +111,7 @@ class CvJdAnalysisServiceTest {
         ArgumentCaptor<Map<String, Object>> payload = ArgumentCaptor.forClass(Map.class);
         verify(client).infer(eq(CvJdAnalysisService.ENDPOINT), payload.capture());
         assertThat(payload.getValue()).containsEntry("filename", "cv-an.pdf").containsEntry("content_base64", "SmF2YQ==")
-            .containsEntry("include_github", false);
+            .doesNotContainKey("include_github");
         @SuppressWarnings("unchecked")
         Map<String, Object> sentJob = (Map<String, Object>) payload.getValue().get("job");
         assertThat(sentJob.get("description")).isEqualTo("Yêu cầu Java\nDocker");

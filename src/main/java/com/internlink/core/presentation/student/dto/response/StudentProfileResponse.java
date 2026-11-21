@@ -27,7 +27,6 @@ public class StudentProfileResponse {
     private String programName;
     private String departmentName;
     private BigDecimal gpa;
-    private String githubUrl;
     private String bio;
     private List<Map<String, Object>> certificates;
     private List<Map<String, Object>> passedCourses;
