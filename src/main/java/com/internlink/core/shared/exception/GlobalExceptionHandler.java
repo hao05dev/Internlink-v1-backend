@@ -147,6 +147,18 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.DOCUMENT_TOO_LARGE, "Dung lượng tệp tải lên vượt quá giới hạn cho phép"));
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingRequestPart(org.springframework.web.multipart.support.MissingServletRequestPartException ex) {
+        String msg = String.format("Thiếu phần tệp tải lên bắt buộc: %s", ex.getRequestPartName());
+        return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.INVALID_INPUT_DATA, msg));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMultipartException(org.springframework.web.multipart.MultipartException ex) {
+        log.warn("Lỗi xử lý multipart: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.INVALID_INPUT_DATA, "Yêu cầu tải lên không đúng định dạng multipart/form-data"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex, HttpServletRequest req) {
         String traceId = UUID.randomUUID().toString().substring(0, 8);

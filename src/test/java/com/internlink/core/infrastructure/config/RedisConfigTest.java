@@ -51,4 +51,16 @@ class RedisConfigTest {
 
         verify(cache).evict("all");
     }
+
+    @Test
+    void redisDownOnPutEvictOrClearDoesNotFailTheRequest() {
+        Cache cache = mock(Cache.class);
+        when(cache.getName()).thenReturn("academic_programs");
+        RuntimeException down = new IllegalStateException("Unable to connect to Redis");
+        RedisConfig.EvictOnReadErrorHandler handler = new RedisConfig.EvictOnReadErrorHandler();
+
+        handler.handleCachePutError(down, cache, "all", List.of());
+        handler.handleCacheEvictError(down, cache, "all");
+        handler.handleCacheClearError(down, cache);
+    }
 }

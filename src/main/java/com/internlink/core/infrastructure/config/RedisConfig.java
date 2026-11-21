@@ -103,5 +103,21 @@ public class RedisConfig implements CachingConfigurer {
                 log.warn("Không xóa được cache {}::{}: {}", cache.getName(), key, evictError.getMessage());
             }
         }
+
+        // Redis là tầng tăng tốc, không phải nguồn dữ liệu: khi Redis tắt, request vẫn phải thành công.
+        @Override
+        public void handleCachePutError(RuntimeException exception, Cache cache, Object key, Object value) {
+            log.warn("Không ghi được cache {}::{}: {}", cache.getName(), key, exception.getMessage());
+        }
+
+        @Override
+        public void handleCacheEvictError(RuntimeException exception, Cache cache, Object key) {
+            log.warn("Không xóa được cache {}::{}: {}", cache.getName(), key, exception.getMessage());
+        }
+
+        @Override
+        public void handleCacheClearError(RuntimeException exception, Cache cache) {
+            log.warn("Không dọn được cache {}: {}", cache.getName(), exception.getMessage());
+        }
     }
 }
