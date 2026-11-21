@@ -38,13 +38,16 @@ public class StudentDossierController {
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<StudentDossierResponse>> uploadDossierDocument(
-        @RequestParam UUID placementId,
+        @RequestParam(name = "placementId", required = false) UUID placementId,
         @RequestParam String templateCode,
         @RequestPart("file") MultipartFile file,
         @AuthenticationPrincipal CustomUserDetail principal
     ) {
         User student = userRepository.findById(principal.getId())
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", principal.getId()));
+        if (placementId == null) {
+            placementId = dossierService.getStudentDossier(student).getPlacementId();
+        }
         StudentDossierResponse response = dossierService.uploadDossierDocument(placementId, templateCode, file, student);
         return ResponseEntity.ok(ApiResponse.success("Nộp tệp hồ sơ thành công", response));
     }

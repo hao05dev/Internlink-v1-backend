@@ -64,9 +64,9 @@ public class InternshipReportService {
                                         .placement(placement)
                                         .reportType(type)
                                         .build());
-        if (report.getId() != null && !"REVISION_REQUIRED".equals(report.getStatus()))
-            throw new BadRequestException(
-                    "Báo cáo đã nộp; chỉ có thể nộp lại khi được yêu cầu sửa");
+        // Nộp lại được khi GVHD chưa xét (thay file) hoặc khi được yêu cầu sửa; đã duyệt thì khóa.
+        if (report.getId() != null && "APPROVED".equals(report.getStatus()))
+            throw new BadRequestException("Báo cáo đã được GVHD duyệt, không thể nộp lại");
         report.setDocument(document);
         report.setStatus("SUBMITTED");
         report.setSubmittedAt(OffsetDateTime.now());
@@ -136,6 +136,8 @@ public class InternshipReportService {
                 r.getWasLate(),
                 r.getLecturerFeedback(),
                 r.getSubmittedAt(),
-                r.getReviewedAt());
+                r.getReviewedAt(),
+                r.getDocument().getOriginalName(),
+                r.getDocument().getSizeBytes());
     }
 }
