@@ -14,7 +14,7 @@ public record AssessmentSchemeRequest(
     @NotNull @Min(1) Integer revision,
     @NotBlank String sourceReference,
     @NotEmpty List<Map<String, Object>> components,
-    @NotNull @Min(1) Integer requiredLogbookWeeks,
+    @NotNull @Min(0) Integer requiredLogbookWeeks,
     @NotNull @Min(0) Integer weeklyGraceDays,
     @NotNull Boolean requireMidtermReport,
     @NotNull Boolean requireFinalReport,

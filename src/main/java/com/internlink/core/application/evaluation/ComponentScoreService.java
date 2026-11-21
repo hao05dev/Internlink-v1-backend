@@ -47,8 +47,8 @@ public class ComponentScoreService {
                 || !List.of("APPROVED", "RETIRED")
                         .contains(placement.getAssessmentScheme().getStatus()))
             throw new BadRequestException("Lần thực tập chưa có phương án đánh giá được duyệt");
-        if (placement.getStatus() != PlacementStatus.ACTIVE)
-            throw new BadRequestException("Chỉ chấm khi lần thực tập đang ACTIVE");
+        if (placement.getStatus() != PlacementStatus.ACTIVE && placement.getStatus() != PlacementStatus.COMPLETED)
+            throw new BadRequestException("Chỉ chấm khi lần thực tập đang ACTIVE hoặc COMPLETED");
         Map<String, Object> definition =
                 AssessmentRules.component(
                         placement.getAssessmentScheme().getComponents(), request.componentCode());

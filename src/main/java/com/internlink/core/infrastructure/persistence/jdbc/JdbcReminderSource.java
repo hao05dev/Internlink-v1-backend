@@ -20,7 +20,7 @@ public class JdbcReminderSource implements ReminderSource {
 WITH placements AS (
     SELECT p.*,st.department_id,t.evaluation_deadline,t.status AS term_status,
         coalesce(internlink_try_timestamp(p.work_schedule #>> '{extension,reportDueAt}'),s.final_report_due_at,t.evaluation_deadline) AS report_due,
-        coalesce(s.weekly_grace_days,0) AS grace_days, s.midterm_report_due_at, coalesce(s.require_midterm_report,false) AS require_midterm_report
+        coalesce(s.weekly_grace_days,0) AS grace_days, coalesce(s.required_logbook_weeks,0) AS required_logbook_weeks, s.midterm_report_due_at, coalesce(s.require_midterm_report,false) AS require_midterm_report
     FROM internship_placements p JOIN internship_terms t ON t.id=p.term_id JOIN users st ON st.id=p.student_id
     LEFT JOIN assessment_schemes s ON s.id=p.assessment_scheme_id
     WHERE t.status NOT IN ('DRAFT','CLOSED') AND p.status IN ('PREPARING','ACTIVE','PAUSED','COMPLETED')
@@ -58,7 +58,7 @@ WITH placements AS (
     SELECT p.student_id,p.id::text||'/'||w.week_start::date::text,'LOGBOOK_DEADLINE','Nhắc tổng hợp nhật ký tuần','/student/daily-logs',
         (least(w.week_start::date+6,p.end_date)+(p.grace_days+1)*INTERVAL '1 day')::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
     FROM placements p CROSS JOIN LATERAL generate_series(p.start_date::timestamp,p.end_date::timestamp,INTERVAL '7 days') w(week_start)
-    WHERE p.status='ACTIVE' AND NOT EXISTS(SELECT 1 FROM weekly_logbooks l WHERE l.placement_id=p.id
+    WHERE p.status='ACTIVE' AND p.required_logbook_weeks>0 AND NOT EXISTS(SELECT 1 FROM weekly_logbooks l WHERE l.placement_id=p.id
         AND l.period_start=w.week_start::date AND l.status NOT IN ('DRAFT','REVISION_REQUESTED'))
     UNION ALL
     SELECT p.mentor_id,l.id::text,'LOGBOOK_REVIEW_REMINDER','Nhật ký tuần chờ mentor phản hồi','/mentor/weekly-evaluations',
