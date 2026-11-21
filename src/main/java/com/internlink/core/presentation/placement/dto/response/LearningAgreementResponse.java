@@ -33,6 +33,16 @@ public class LearningAgreementResponse {
     private Map<String, Object> companySignature;
     private Map<String, Object> facultySignature;
     private UUID documentId;
+    /** Lấy từ offer để giao diện hiển thị đủ nội dung thỏa thuận. */
+    private java.time.LocalDate startDate;
+    private java.time.LocalDate endDate;
+    private String jobTitle;
+    private String mentorName;
+    private String mentorEmail;
+    /** Thời điểm từng bên ký (null = chưa ký), rút từ chữ ký đã lưu. */
+    private String studentSignedAt;
+    private String companySignedAt;
+    private String facultySignedAt;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 }

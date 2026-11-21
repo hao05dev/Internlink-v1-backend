@@ -21,6 +21,11 @@ public class CompanyProfileController {
         return ApiResponse.success(profiles.getOwnProfile());
     }
 
+    @GetMapping("/mentors")
+    public ApiResponse<java.util.List<com.internlink.core.presentation.company.dto.response.CompanyMentorResponse>> mentors() {
+        return ApiResponse.success(profiles.getOwnMentors());
+    }
+
     @PutMapping
     public ApiResponse<CompanyPublicResponse> update(@Valid @RequestBody CompanyProfileRequest request) {
         return ApiResponse.success(profiles.updateOwnProfile(request));

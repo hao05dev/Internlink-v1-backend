@@ -18,6 +18,7 @@ public class CompanyProfileServiceImpl implements CompanyProfileService {
     private final CompanyProfileMapper mapper;
     private final CompanyPublicMapper publicMapper;
     private final MediaReferencePolicy media;
+    private final com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository users;
 
     @Override
     @Transactional(readOnly = true)
@@ -32,5 +33,19 @@ public class CompanyProfileServiceImpl implements CompanyProfileService {
         media.company(company.getId(), request.getLogoUrl(), request.getCoverImageUrl());
         mapper.apply(company, request);
         return publicMapper.toResponse(companies.save(company));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<com.internlink.core.presentation.company.dto.response.CompanyMentorResponse> getOwnMentors() {
+        var company = access.ownCompany();
+        return users.findByCompanyIdAndRole(company.getId(), com.internlink.core.shared.enums.UserRole.COMPANY_MENTOR).stream()
+            .filter(user -> !Boolean.FALSE.equals(user.getIsActive()))
+            .map(user -> new com.internlink.core.presentation.company.dto.response.CompanyMentorResponse(
+                user.getId(), user.getFullName(), user.getEmail()))
+            .sorted(java.util.Comparator.comparing(
+                com.internlink.core.presentation.company.dto.response.CompanyMentorResponse::fullName,
+                java.util.Comparator.nullsLast(String::compareTo)))
+            .toList();
     }
 }

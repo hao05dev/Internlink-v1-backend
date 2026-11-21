@@ -6,4 +6,5 @@ import com.internlink.core.presentation.company.dto.response.CompanyPublicRespon
 public interface CompanyProfileService {
     CompanyPublicResponse getOwnProfile();
     CompanyPublicResponse updateOwnProfile(CompanyProfileRequest request);
+    java.util.List<com.internlink.core.presentation.company.dto.response.CompanyMentorResponse> getOwnMentors();
 }

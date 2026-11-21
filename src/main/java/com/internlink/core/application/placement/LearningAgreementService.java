@@ -13,6 +13,7 @@ public interface LearningAgreementService {
     LearningAgreementResponse getAgreementByOfferId(UUID offerId);
     List<LearningAgreementResponse> getAgreementsByDepartment(UUID departmentId, AgreementStatus status);
     List<LearningAgreementResponse> getAgreementsByStudent(UUID studentId);
+    List<LearningAgreementResponse> getAgreementsForOwnCompany();
     LearningAgreementResponse createAgreement(UUID studentId, LearningAgreementRequest request);
     LearningAgreementResponse signAgreement(UUID id, String signerRole, Map<String, Object> signatureData);
     LearningAgreementResponse reviewAgreementByFaculty(UUID id, AgreementStatus status);

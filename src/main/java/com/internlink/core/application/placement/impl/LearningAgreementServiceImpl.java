@@ -77,6 +77,16 @@ public class LearningAgreementServiceImpl implements LearningAgreementService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<LearningAgreementResponse> getAgreementsForOwnCompany() {
+        User actor = currentActor();
+        ResourceAuthorization.require(actor.getRole() == UserRole.COMPANY_REP && actor.getCompany() != null);
+        return agreementRepository.findByCompanyId(actor.getCompany().getId()).stream()
+            .map(this::mapToResponse)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<LearningAgreementResponse> getAgreementsByDepartment(UUID departmentId, AgreementStatus status) {
         ResourceAuthorization.require(ResourceAuthorization.managesDepartment(currentActor(), departmentId));
         List<LearningAgreement> agreements = status == null
@@ -173,6 +183,13 @@ public class LearningAgreementServiceImpl implements LearningAgreementService {
         var currentUser = securityGuard.currentUser();
         UUID currentUserId = currentUser.getId();
         UserRole actualRole = currentUser.getRole();
+        // Người ký và thời điểm ký do máy chủ ghi, không tin dữ liệu client gửi lên.
+        Map<String, Object> stamped = new java.util.LinkedHashMap<>(signatureData);
+        stamped.remove("signatureData");
+        stamped.put("role", actualRole.name());
+        stamped.put("signedBy", currentActor().getFullName());
+        stamped.put("signedAt", java.time.OffsetDateTime.now().toString());
+        signatureData = stamped;
 
         switch (actualRole) {
             case STUDENT -> {
@@ -322,6 +339,15 @@ public class LearningAgreementServiceImpl implements LearningAgreementService {
             .companySignature(entity.getCompanySignature())
             .facultySignature(entity.getFacultySignature())
             .documentId(entity.getDocument() != null ? entity.getDocument().getId() : null)
+            .startDate(entity.getOffer().getStartDate())
+            .endDate(entity.getOffer().getEndDate())
+            .jobTitle(entity.getOffer().getApplication() != null && entity.getOffer().getApplication().getJob() != null
+                ? entity.getOffer().getApplication().getJob().getTitle() : null)
+            .mentorName(entity.getOffer().getProposedMentor() != null ? entity.getOffer().getProposedMentor().getFullName() : null)
+            .mentorEmail(entity.getOffer().getProposedMentor() != null ? entity.getOffer().getProposedMentor().getEmail() : null)
+            .studentSignedAt(signedAt(entity.getStudentSignature(), entity))
+            .companySignedAt(signedAt(entity.getCompanySignature(), entity))
+            .facultySignedAt(signedAt(entity.getFacultySignature(), entity))
             .createdAt(entity.getCreatedAt())
             .updatedAt(entity.getUpdatedAt())
             .build();
@@ -331,5 +357,14 @@ public class LearningAgreementServiceImpl implements LearningAgreementService {
         UUID actorId = securityGuard.currentUser().getId();
         return userRepository.findById(actorId)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", actorId));
+    }
+
+    /** Thời điểm ký trong chữ ký; chữ ký cũ không ghi thời điểm thì lấy lần cập nhật cuối của thỏa thuận. */
+    static String signedAt(Map<String, Object> signature, LearningAgreement entity) {
+        if (signature == null || signature.isEmpty()) return null;
+        Object value = signature.get("signedAt");
+        if (value == null && signature.get("signatureData") instanceof Map<?, ?> nested) value = nested.get("signedAt");
+        if (value != null) return value.toString();
+        return entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : null;
     }
 }

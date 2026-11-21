@@ -58,6 +58,12 @@ public class LearningAgreementController {
         return ResponseEntity.ok(ApiResponse.success(list));
     }
 
+    @GetMapping("/company/mine")
+    @PreAuthorize("hasRole('COMPANY_REP')")
+    public ResponseEntity<ApiResponse<List<LearningAgreementResponse>>> getMyCompanyAgreements() {
+        return ResponseEntity.ok(ApiResponse.success(agreementService.getAgreementsForOwnCompany()));
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<LearningAgreementResponse>> createAgreement(
