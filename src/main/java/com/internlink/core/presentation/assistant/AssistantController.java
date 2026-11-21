@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import java.util.UUID;
 
-/** Trợ lý CapyLink: chỉ dành cho sinh viên và giảng viên đã đăng nhập; trả lời theo vai trò người hỏi. */
+/** Trợ lý CapyLink: hỗ trợ giải đáp quy trình, cẩm nang, tin tuyển dụng cho sinh viên, giảng viên và khách. */
 @RestController
 @RequestMapping("/api/v1/assistant")
 @RequiredArgsConstructor
@@ -27,7 +27,6 @@ public class AssistantController {
     private final AssistantInteractionLog interactions;
 
     @PostMapping("/chat")
-    @PreAuthorize("hasAnyRole('STUDENT', 'LECTURER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> chat(
             @Valid @RequestBody AssistantChatRequest request,
             @AuthenticationPrincipal CustomUserDetail user) {
@@ -36,7 +35,6 @@ public class AssistantController {
 
     /** Chấm 👍/👎 theo log_id trả về cùng câu trả lời; nhật ký không gắn với người hỏi. */
     @PostMapping("/chat/{logId}/feedback")
-    @PreAuthorize("hasAnyRole('STUDENT', 'LECTURER')")
     public ResponseEntity<ApiResponse<Void>> feedback(@PathVariable UUID logId,
                                                       @Valid @RequestBody AssistantFeedbackRequest request) {
         interactions.rate(logId, request.helpful(), request.note());

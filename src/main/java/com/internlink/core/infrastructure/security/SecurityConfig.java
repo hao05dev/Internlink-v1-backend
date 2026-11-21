@@ -75,6 +75,8 @@ public class SecurityConfig {
                                 "/api/v1/jobs/public/**",
                                 "/api/v1/terms",
                                 "/api/v1/posts/public/**",
+                                "/api/v1/assistant/chat",
+                                "/api/v1/assistant/chat/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
@@ -104,6 +106,8 @@ public class SecurityConfig {
                                                 "/api/v1/jobs/public/**",
                                                 "/api/v1/terms",
                                                 "/api/v1/posts/public/**",
+                                                "/api/v1/assistant/chat",
+                                                "/api/v1/assistant/chat/**",
                                                 "/v3/api-docs/**",
                                                 "/swagger-ui/**",
                                                 "/swagger-ui.html")

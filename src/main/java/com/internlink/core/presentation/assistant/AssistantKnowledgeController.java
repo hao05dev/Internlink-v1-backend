@@ -17,16 +17,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Kho tri thức của trợ lý CapyLink: Ban quản lý Khoa tải lên, xem trước, bật/tắt tài liệu. */
+/** Kho tri thức của trợ lý CapyLink: quản trị viên hệ thống tải lên, xem trước, bật/tắt tài liệu. */
 @RestController
-@RequestMapping("/api/v1/faculty/assistant-knowledge")
-@PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN')")
+@RequestMapping("/api/v1/admin/assistant-knowledge")
+@PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class AssistantKnowledgeController {
     private final AssistantKnowledgeAdminService service;
     private final AssistantInteractionLog interactions;
 
-    /** Tỉ lệ 👍/👎 và các câu hỏi chưa trả lời tốt (ẩn danh) để Khoa bổ sung tài liệu. */
+    /** Tỉ lệ 👍/👎 và các câu hỏi chưa trả lời tốt (ẩn danh) để quản trị viên bổ sung tài liệu. */
     @GetMapping("/insights")
     public ApiResponse<Map<String, Object>> insights(@RequestParam(defaultValue = "30") int days) {
         return ApiResponse.success(interactions.insights(Math.max(1, Math.min(days, 365))));
