@@ -25,6 +25,7 @@ class AssistantChatServiceTest {
     @Mock AssistantKnowledgeProvider knowledge;
     @Mock AssistantStudentStatusService studentStatus;
     @Mock AssistantInteractionLog interactions;
+    @Mock AssistantTermInfoProvider termInfo;
     @InjectMocks AssistantChatService service;
 
     private static CustomUserDetail user(UserRole role) {
@@ -40,6 +41,7 @@ class AssistantChatServiceTest {
 
     @Test
     void guestReceivesOnlyPublicContextAndNoPersonalStatus() {
+        when(termInfo.publishedTerms()).thenReturn(List.of(Map.of("name", "HK hè")));
         when(ai.assistantChat(any())).thenReturn(Map.of("answer", "ok", "status", "ANSWERED"));
 
         service.chat(new AssistantChatRequest("  Quy trình thực tập?  ", null, null), null);
@@ -48,6 +50,7 @@ class AssistantChatServiceTest {
         assertThat(body.get("audience")).isEqualTo("GUEST");
         assertThat(body.get("message")).isEqualTo("Quy trình thực tập?");
         assertThat(body).doesNotContainKeys("me", "own_identifiers");
+        assertThat(body.get("terms")).isEqualTo(List.of(Map.of("name", "HK hè")));
         verify(knowledge).knowledge(false);
         verifyNoInteractions(studentStatus);
     }
@@ -71,8 +74,14 @@ class AssistantChatServiceTest {
     @Test
     void lecturerNeverTriggersStudentLookup() {
         when(ai.assistantChat(any())).thenReturn(Map.of("answer", "ok"));
-        service.chat(new AssistantChatRequest("Xu hướng kỹ năng?", null, null), user(UserRole.LECTURER));
-        assertThat(sentBody().get("audience")).isEqualTo("LECTURER");
+        CustomUserDetail lecturer = CustomUserDetail.builder().id(UUID.randomUUID()).email("son@ctu.edu.vn")
+                .fullName("Trần Văn Sơn").role(UserRole.LECTURER).build();
+        service.chat(new AssistantChatRequest("Xu hướng kỹ năng?", null, null), lecturer);
+        Map<String, Object> body = sentBody();
+        assertThat(body.get("audience")).isEqualTo("LECTURER");
+        assertThat(body.get("me")).isEqualTo(List.of(Map.of("key", "identity", "label", "Bạn là",
+                "value", "Trần Văn Sơn — tài khoản giảng viên")));
+        assertThat(body.get("own_identifiers")).isEqualTo(List.of("son@ctu.edu.vn"));
         verifyNoInteractions(studentStatus);
     }
 

@@ -7,12 +7,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Diễn giải tiến độ thực tập của chính sinh viên thành các dòng "nhãn: giá trị" cho trợ lý. */
+/**
+ * Diễn giải tiến độ thực tập của chính sinh viên thành các dòng "khoá/nhãn: giá trị" cho trợ lý.
+ * Khoá (identity, lecturer, mentor…) giúp trợ lý chỉ trả lời đúng dòng được hỏi.
+ */
 @Service
 @RequiredArgsConstructor
 public class AssistantStudentStatusService {
@@ -34,25 +40,61 @@ public class AssistantStudentStatusService {
     @Transactional(readOnly = true)
     public Snapshot forStudent(UUID userId) {
         List<Map<String, String>> items = new ArrayList<>();
-        List<String> own = new ArrayList<>();
-        snapshots.latestEnrollment(userId).ifPresentOrElse(enrollment -> {
-            items.add(item("Đợt thực tập", enrollment.termName()));
-            items.add(item("Giấy giới thiệu", enrollment.letterReceived()
+        Set<String> own = new LinkedHashSet<>();
+        snapshots.profile(userId).ifPresent(profile -> {
+            String who = profile.fullName();
+            if (profile.studentCode() != null) who += " — MSSV " + profile.studentCode();
+            if (profile.programName() != null) who += ", ngành " + profile.programName();
+            items.add(item("identity", "Bạn là", who));
+            addIfPresent(own, profile.email());
+            addIfPresent(own, profile.studentCode());
+        });
+        Optional<StudentInternshipSnapshotRepository.Enrollment> enrollment = snapshots.latestEnrollment(userId);
+        enrollment.ifPresentOrElse(e -> {
+            items.add(item("term", "Đợt thực tập", e.termName()));
+            items.add(item("letter", "Giấy giới thiệu", e.letterReceived()
                     ? "Doanh nghiệp đã nhận giấy giới thiệu" : "Chưa ghi nhận giấy giới thiệu"));
-            if (enrollment.studentCode() != null) own.add(enrollment.studentCode());
-        }, () -> items.add(item("Đợt thực tập", "Chưa có tên trong danh sách đợt nào")));
+            addIfPresent(own, e.studentCode());
+        }, () -> items.add(item("term", "Đợt thực tập", "Chưa có tên trong danh sách đợt nào")));
         Map<String, Long> applications = snapshots.applicationCounts(userId);
-        items.add(item("Hồ sơ ứng tuyển", applications.isEmpty() ? "Chưa nộp hồ sơ nào" : describe(applications, APPLICATION)));
-        snapshots.latestPlacement(userId).ifPresentOrElse(placement -> {
-            items.add(item("Nơi thực tập", placement.companyName() + " — "
-                    + PLACEMENT.getOrDefault(placement.status(), placement.status())));
-            if (placement.startDate() != null && placement.endDate() != null) {
-                items.add(item("Thời gian", DATE.format(placement.startDate()) + " – " + DATE.format(placement.endDate())));
+        items.add(item("applications", "Hồ sơ ứng tuyển",
+                applications.isEmpty() ? "Chưa nộp hồ sơ nào" : describe(applications, APPLICATION)));
+        Optional<StudentInternshipSnapshotRepository.Placement> placement = snapshots.latestPlacement(userId);
+        placement.ifPresentOrElse(p -> {
+            items.add(item("placement", "Nơi thực tập", p.companyName() + " — "
+                    + PLACEMENT.getOrDefault(p.status(), p.status())));
+            if (p.startDate() != null && p.endDate() != null) {
+                items.add(item("period", "Thời gian", DATE.format(p.startDate()) + " – " + DATE.format(p.endDate())));
             }
-            Map<String, Long> logbooks = snapshots.logbookCounts(placement.id());
-            items.add(item("Nhật ký tuần", logbooks.isEmpty() ? "Chưa có tuần nào" : describe(logbooks, LOGBOOK)));
-        }, () -> items.add(item("Nơi thực tập", "Chưa được xác nhận nơi thực tập")));
-        return new Snapshot(items, own);
+            Map<String, Long> logbooks = snapshots.logbookCounts(p.id());
+            items.add(item("logbook", "Nhật ký tuần", logbooks.isEmpty() ? "Chưa có tuần nào" : describe(logbooks, LOGBOOK)));
+        }, () -> items.add(item("placement", "Nơi thực tập", "Chưa được xác nhận nơi thực tập")));
+
+        // GVHD: ưu tiên người ghi trên nơi thực tập, sau đó tới phân công trong danh sách đợt.
+        // Tên và email luôn lấy cùng một nguồn để không ghép nhầm hai người.
+        boolean fromPlacement = placement.map(p -> p.lecturerName() != null).orElse(false);
+        String lecturerName = fromPlacement ? placement.get().lecturerName()
+                : enrollment.map(StudentInternshipSnapshotRepository.Enrollment::lecturerName).orElse(null);
+        String lecturerEmail = fromPlacement ? placement.get().lecturerEmail()
+                : enrollment.map(StudentInternshipSnapshotRepository.Enrollment::lecturerEmail).orElse(null);
+        items.add(item("lecturer", "Giảng viên hướng dẫn", lecturerName == null
+                ? "Chưa được phân công giảng viên hướng dẫn" : withEmail(lecturerName, lecturerEmail)));
+        addIfPresent(own, lecturerEmail);
+        String mentorName = placement.map(StudentInternshipSnapshotRepository.Placement::mentorName).orElse(null);
+        String mentorEmail = placement.map(StudentInternshipSnapshotRepository.Placement::mentorEmail).orElse(null);
+        items.add(item("mentor", "Mentor doanh nghiệp", mentorName != null ? withEmail(mentorName, mentorEmail)
+                : placement.isPresent() ? "Nơi thực tập này chưa có mentor trên hệ thống"
+                : "Chưa có (mentor được gán khi bạn được xác nhận nơi thực tập)"));
+        addIfPresent(own, mentorEmail);
+        return new Snapshot(items, List.copyOf(own));
+    }
+
+    private static String withEmail(String name, String email) {
+        return email == null || email.isBlank() ? name : name + " (" + email + ")";
+    }
+
+    private static void addIfPresent(Set<String> target, String value) {
+        if (value != null && !value.isBlank()) target.add(value);
     }
 
     private static String describe(Map<String, Long> counts, Map<String, String> labels) {
@@ -61,7 +103,7 @@ public class AssistantStudentStatusService {
                 .collect(Collectors.joining(", "));
     }
 
-    private static Map<String, String> item(String label, String value) {
-        return Map.of("label", label, "value", value == null ? "" : value);
+    private static Map<String, String> item(String key, String label, String value) {
+        return Map.of("key", key, "label", label, "value", value == null || value.isBlank() ? "—" : value);
     }
 }
