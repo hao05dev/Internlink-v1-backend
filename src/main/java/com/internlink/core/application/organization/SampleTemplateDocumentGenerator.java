@@ -81,16 +81,16 @@ public class SampleTemplateDocumentGenerator {
         return switch (type) {
             case FORM_04_RECEPTION_8W -> "04-Phieu_nhan_SV.doc";
             case FORM_04_RECEPTION_12W -> "04-Phieu_nhan_SV_12tuan.doc";
-            case M01 -> "M-TT-01-Phieugiaoviec.doc";
-            case M02 -> "M-TT-02-Phieutheodoi.doc";
+            case M01 -> "M-TT-01-Phieugiaoviec_8tuan.doc";
+            case M02 -> "M-TT-02-Phieutheodoi_8tuan.doc";
             case M03 -> "M-TT-03-pdgia_coquan.doc";
             case M04, M04_LECTURER_COMMON -> {
-                if ("KHMT".equals(prog) || "CS".equals(prog)) yield "M-TT-04-Phieu_danh_gia_danh cho GVHD-2025-KHMT.doc";
-                if ("MMT".equals(prog) || "NE".equals(prog)) yield "M-TT-04-Phieu_danh_gia_danh cho GVHD-2025_MMT.doc";
-                yield "M-TT-04-Phieu_danh_gia_danh cho GVHD-2025.doc";
+                if ("KHMT".equals(prog) || "CS".equals(prog)) yield "M-TT-04-Phieu_danh_gia_danh cho GVHD-2026-KHMT.doc";
+                if ("MMT".equals(prog) || "NE".equals(prog) || "IA".equals(prog)) yield "M-TT-04-Phieu_danh_gia_danh cho GVHD-2026_MMT.doc";
+                yield "M-TT-04-Phieu_danh_gia_danh cho GVHD-2026.doc";
             }
-            case M04_LECTURER_KHMT -> "M-TT-04-Phieu_danh_gia_danh cho GVHD-2025-KHMT.doc";
-            case M04_LECTURER_MMT -> "M-TT-04-Phieu_danh_gia_danh cho GVHD-2025_MMT.doc";
+            case M04_LECTURER_KHMT -> "M-TT-04-Phieu_danh_gia_danh cho GVHD-2026-KHMT.doc";
+            case M04_LECTURER_MMT -> "M-TT-04-Phieu_danh_gia_danh cho GVHD-2026_MMT.doc";
             case M05, M05_REPORT_GUIDELINE, FINAL_REPORT -> "M-TT-05-Maubaocao.doc";
             default -> null;
         };

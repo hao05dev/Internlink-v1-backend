@@ -1,6 +1,9 @@
 package com.internlink.core.presentation.organization.controller;
 
+import com.internlink.core.application.organization.ReportTemplateDownloadService;
 import com.internlink.core.application.organization.ReportTemplateService;
+import com.internlink.core.application.organization.TemplateAudience;
+import com.internlink.core.application.organization.TemplateAudienceResolver;
 import com.internlink.core.application.organization.TemplateDownload;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
@@ -30,23 +33,30 @@ import java.util.UUID;
 public class ReportTemplateController {
 
     private final ReportTemplateService templateService;
+    private final ReportTemplateDownloadService downloadService;
+    private final TemplateAudienceResolver audienceResolver;
     private final JpaUserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ReportTemplateResponse>>> getTemplates(
         @RequestParam UUID termId,
         @RequestParam(required = false) UUID departmentId,
-        @RequestParam(required = false) Boolean activeOnly
+        @RequestParam(required = false) Boolean activeOnly,
+        @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        return ResponseEntity.ok(ApiResponse.success(templateService.getTemplates(termId, departmentId, activeOnly)));
+        return ResponseEntity.ok(ApiResponse.success(
+            templateService.getTemplates(termId, departmentId, activeOnly, currentUser(principal))));
     }
 
     @GetMapping("/evaluation-form")
     public ResponseEntity<ApiResponse<ReportTemplateResponse>> getEvaluationForm(
         @RequestParam UUID termId,
-        @RequestParam(required = false) String programCode
+        @RequestParam(required = false) String programCode,
+        @RequestParam(required = false) UUID placementId,
+        @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        ReportTemplateResponse template = templateService.getEvaluationTemplateForStudent(termId, programCode);
+        TemplateAudience audience = audienceResolver.resolve(principal.getId(), placementId, termId);
+        ReportTemplateResponse template = downloadService.findEvaluationTemplate(termId, programCode, audience);
         return ResponseEntity.ok(ApiResponse.success(template));
     }
 
@@ -64,8 +74,7 @@ public class ReportTemplateController {
         @RequestPart("file") MultipartFile file,
         @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        User uploader = userRepository.findById(principal.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("User", "id", principal.getId()));
+        User uploader = currentUser(principal);
         return ResponseEntity.ok(ApiResponse.success(
             templateService.uploadTemplate(
                 termId, departmentId, programId, programCode, reportType, title, description, isMandatory, file, uploader)
@@ -79,8 +88,7 @@ public class ReportTemplateController {
         @RequestBody com.internlink.core.presentation.organization.dto.request.UpdateReportTemplateRequest request,
         @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        User actor = userRepository.findById(principal.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("User", "id", principal.getId()));
+        User actor = currentUser(principal);
         return ResponseEntity.ok(ApiResponse.success(templateService.updateTemplate(id, request, actor)));
     }
 
@@ -90,8 +98,7 @@ public class ReportTemplateController {
         @PathVariable UUID id,
         @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        User actor = userRepository.findById(principal.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("User", "id", principal.getId()));
+        User actor = currentUser(principal);
         return ResponseEntity.ok(ApiResponse.success(templateService.toggleActive(id, actor)));
     }
 
@@ -101,8 +108,7 @@ public class ReportTemplateController {
         @PathVariable UUID id,
         @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        User actor = userRepository.findById(principal.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("User", "id", principal.getId()));
+        User actor = currentUser(principal);
         templateService.deleteTemplate(id, actor);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
@@ -115,33 +121,44 @@ public class ReportTemplateController {
         @RequestParam(required = false, defaultValue = "false") boolean overwrite,
         @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        User actor = userRepository.findById(principal.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("User", "id", principal.getId()));
+        User actor = currentUser(principal);
         List<ReportTemplateResponse> result = templateService.inheritTemplates(sourceTermId, targetTermId, overwrite, actor);
         return ResponseEntity.ok(ApiResponse.success("Kế thừa biểu mẫu thành công", result));
     }
 
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> downloadTemplate(@PathVariable UUID id) {
-        TemplateDownload download = templateService.loadTemplateDownload(id);
+        TemplateDownload download = downloadService.loadTemplateDownload(id);
         return buildDownloadResponse(download.resource(), download.fileName(), download.mimeType());
     }
 
+    /**
+     * Mẫu theo loại, chọn đúng khoa/ngành/kỳ của sinh viên. placementId: sinh viên của đợt thực tập
+     * (GV/mentor/DN mở mẫu); không có thì lấy theo người đang đăng nhập.
+     */
     @GetMapping("/official/{templateCode}/preview")
     public ResponseEntity<Resource> previewOfficialTemplate(
         @PathVariable String templateCode,
-        @RequestParam(required = false, defaultValue = "DEFAULT") String programCode
+        @RequestParam(required = false) String programCode,
+        @RequestParam(required = false) UUID placementId,
+        @RequestParam(required = false) UUID termId,
+        @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        TemplateDownload download = templateService.loadOfficialTemplateDocx(templateCode, programCode);
+        TemplateAudience audience = audienceResolver.resolve(principal.getId(), placementId, termId);
+        TemplateDownload download = downloadService.loadPreviewForAudience(templateCode, programCode, audience);
         return buildPreviewResponse(download.resource(), download.fileName(), download.mimeType());
     }
 
     @GetMapping("/official/{templateCode}/download")
     public ResponseEntity<Resource> downloadOfficialTemplate(
         @PathVariable String templateCode,
-        @RequestParam(required = false, defaultValue = "DEFAULT") String programCode
+        @RequestParam(required = false) String programCode,
+        @RequestParam(required = false) UUID placementId,
+        @RequestParam(required = false) UUID termId,
+        @AuthenticationPrincipal CustomUserDetail principal
     ) {
-        TemplateDownload download = templateService.loadOfficialTemplate(templateCode, programCode);
+        TemplateAudience audience = audienceResolver.resolve(principal.getId(), placementId, termId);
+        TemplateDownload download = downloadService.loadForAudience(templateCode, programCode, audience);
         return buildDownloadResponse(download.resource(), download.fileName(), download.mimeType());
     }
 
@@ -150,8 +167,13 @@ public class ReportTemplateController {
         @PathVariable ReportTemplateType reportType,
         @RequestParam(required = false, defaultValue = "DEFAULT") String programCode
     ) {
-        TemplateDownload download = templateService.generateFallbackDownload(reportType, programCode);
+        TemplateDownload download = downloadService.generateFallbackDownload(reportType, programCode);
         return buildDownloadResponse(download.resource(), download.fileName(), download.mimeType());
+    }
+
+    private User currentUser(CustomUserDetail principal) {
+        return userRepository.findById(principal.getId())
+            .orElseThrow(() -> new ResourceNotFoundException("User", "id", principal.getId()));
     }
 
     private ResponseEntity<Resource> buildPreviewResponse(Resource resource, String filename, String mimeType) {
