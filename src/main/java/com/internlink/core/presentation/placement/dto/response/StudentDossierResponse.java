@@ -1,5 +1,6 @@
 package com.internlink.core.presentation.placement.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,7 +22,14 @@ public class StudentDossierResponse {
     private int totalRequired;
     private int submittedCount;
     private int missingCount;
+    /** Số mục bắt buộc đã được GVHD duyệt (hoặc Văn phòng đã nhận với Mẫu 04). */
+    private int approvedCount;
+    /** Đủ toàn bộ mục bắt buộc và đã được duyệt: điều kiện để GVHD chấm điểm. */
+    @JsonProperty("isComplete")
+    private boolean isComplete;
+    private String studentName;
     private int completionPercentage;
+    @JsonProperty("isLocked")
     private boolean isLocked;
     private String lockReason;
     private OffsetDateTime deadline;
@@ -47,6 +55,10 @@ public class StudentDossierResponse {
         private Long submittedFileSizeBytes;
         private OffsetDateTime submittedAt;
         private String feedback;
+        private String reviewerName;
+        private OffsetDateTime reviewedAt;
+        /** Mẫu 04 được tính đạt vì Văn phòng đã nhận bản giấy phiếu tiếp nhận. */
+        private boolean approvedByOffice;
         private String downloadTemplateUrl;
         private String previewTemplateUrl;
         private String fileUrl;

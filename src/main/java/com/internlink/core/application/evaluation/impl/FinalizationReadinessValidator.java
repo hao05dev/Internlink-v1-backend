@@ -1,6 +1,7 @@
 package com.internlink.core.application.evaluation.impl;
 
 import com.internlink.core.application.evaluation.AssessmentRules;
+import com.internlink.core.application.placement.dossier.DossierInspector;
 import com.internlink.core.domain.evaluation.AssessmentComponentScore;
 import com.internlink.core.domain.placement.InternshipPlacement;
 import com.internlink.core.infrastructure.persistence.jpa.JpaAssessmentComponentScoreRepository;
@@ -23,6 +24,12 @@ public class FinalizationReadinessValidator {
     private final JpaAssessmentComponentScoreRepository componentScoreRepository;
     private final JpaWeeklyLogbookRepository logbookRepository;
     private final JpaInternshipReportRepository reportRepository;
+    private final DossierInspector dossierInspector;
+
+    /** Hồ sơ nộp Khoa phải đủ và được GVHD duyệt hết trước khi tổng hợp điểm. */
+    public void requireDossierComplete(InternshipPlacement placement) {
+        dossierInspector.requireComplete(placement);
+    }
 
     public Map<String, AssessmentComponentScore> requireReadyForFinalization(InternshipPlacement placement) {
         if (placement.getStatus() != PlacementStatus.ACTIVE)
@@ -40,6 +47,7 @@ public class FinalizationReadinessValidator {
                 throw new BadRequestException("Thiếu nhật ký tuần " + week + " đã được duyệt");
         }
         var reports = reportRepository.findByPlacementId(placement.getId());
+        dossierInspector.requireComplete(placement);
         if (Boolean.TRUE.equals(scheme.getRequireMidtermReport())
             && reports.stream().noneMatch(r -> "MIDTERM".equals(r.getReportType())
                 && "APPROVED".equals(r.getStatus()) && "ACTIVE".equals(r.getDocument().getStatus())))

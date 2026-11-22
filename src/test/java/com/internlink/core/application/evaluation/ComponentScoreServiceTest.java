@@ -42,6 +42,7 @@ class ComponentScoreServiceTest {
                         documents,
                         users,
                         security,
+                        mock(com.internlink.core.application.placement.dossier.DossierInspector.class),
                         mock(
                                 com.internlink.core.application.system.notification
                                         .PlacementWorkflowNotificationHelper.class));

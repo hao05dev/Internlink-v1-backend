@@ -67,6 +67,29 @@ public class PlacementWorkflowNotificationHelper {
                 "Hãy kiểm tra phiếu đánh giá trong hồ sơ thực tập.");
     }
 
+    /** Sinh viên nộp một file hồ sơ: báo GVHD vào duyệt. */
+    public void dossierSubmitted(InternshipPlacement p, UUID actor, String itemLabel) {
+        User lecturer = p.getLecturer();
+        if (lecturer == null || lecturer.getId().equals(actor)) return;
+        String student = p.getStudent() != null ? p.getStudent().getFullName() : "Sinh viên";
+        notifications.sendNotification(lecturer.getId(), "DOSSIER_SUBMITTED",
+                "Hồ sơ thực tập chờ duyệt",
+                student + " vừa nộp " + itemLabel + ". Hãy kiểm tra hồ sơ trước khi chấm điểm.",
+                "/lecturer/internship-record/" + p.getId());
+    }
+
+    /** GVHD duyệt hoặc yêu cầu nộp lại một file hồ sơ: báo sinh viên. */
+    public void dossierReviewed(InternshipPlacement p, UUID actor, String itemLabel, boolean approved, String note) {
+        User student = p.getStudent();
+        if (student == null || student.getId().equals(actor)) return;
+        String body = approved
+                ? itemLabel + " đã được GVHD duyệt."
+                : itemLabel + " cần nộp lại: " + note;
+        notifications.sendNotification(student.getId(), approved ? "DOSSIER_APPROVED" : "DOSSIER_REVISION_REQUIRED",
+                approved ? "Hồ sơ thực tập đã được duyệt" : "Hồ sơ thực tập cần nộp lại",
+                body, "/student/documents");
+    }
+
     public void changed(InternshipPlacement p, UUID actor, String type, String title) {
         for (var user : Arrays.asList(p.getStudent(), p.getMentor(), p.getLecturer()))
             send(user, actor, type, title, "Hãy kiểm tra hồ sơ và hạn xử lý mới.");

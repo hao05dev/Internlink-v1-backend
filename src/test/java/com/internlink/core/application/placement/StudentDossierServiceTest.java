@@ -9,7 +9,10 @@ import com.internlink.core.infrastructure.integration.storage.StorageServiceRout
 import com.internlink.core.infrastructure.persistence.jpa.JpaDocumentRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipPlacementRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipReportRepository;
-import com.internlink.core.infrastructure.persistence.jpa.JpaLearningAgreementRepository;
+import com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository;
+import com.internlink.core.application.placement.dossier.DossierInspector;
+import com.internlink.core.application.placement.dossier.DossierResponseMapper;
+import com.internlink.core.application.system.notification.PlacementWorkflowNotificationHelper;
 import com.internlink.core.presentation.placement.dto.response.StudentDossierResponse;
 import com.internlink.core.shared.enums.ContextType;
 import com.internlink.core.shared.enums.DocumentType;
@@ -43,7 +46,10 @@ class StudentDossierServiceTest {
     private JpaInternshipReportRepository reportRepository;
 
     @Mock
-    private JpaLearningAgreementRepository agreementRepository;
+    private JpaStudentFoundApplicationRepository acceptanceFormRepository;
+
+    @Mock
+    private PlacementWorkflowNotificationHelper notifications;
 
     @Mock
     private StorageServiceRouter storageServiceRouter;
@@ -56,8 +62,10 @@ class StudentDossierServiceTest {
             placementRepository,
             documentRepository,
             reportRepository,
-            agreementRepository,
-            storageServiceRouter
+            storageServiceRouter,
+            new DossierInspector(documentRepository, reportRepository, acceptanceFormRepository),
+            new DossierResponseMapper(),
+            notifications
         );
     }
 
@@ -103,7 +111,10 @@ class StudentDossierServiceTest {
 
         var item04 = response.getItems().stream().filter(i -> "FORM_04".equals(i.getTemplateCode())).findFirst().orElseThrow();
         assertThat(item04.isSubmitted()).isTrue();
-        assertThat(item04.getStatus()).isEqualTo("APPROVED");
+        // Nộp xong là chờ GVHD duyệt, không còn tự động "đạt".
+        assertThat(item04.getStatus()).isEqualTo("PENDING");
+        assertThat(response.getApprovedCount()).isZero();
+        assertThat(response.isComplete()).isFalse();
         assertThat(item04.getSubmittedFileName()).isEqualTo("04-Phieu-nhan-SV.pdf");
 
         var itemM03 = response.getItems().stream().filter(i -> "M03".equals(i.getTemplateCode())).findFirst().orElseThrow();

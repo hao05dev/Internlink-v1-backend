@@ -72,4 +72,19 @@ public class Document extends BaseEntity {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    /** Kết quả GVHD duyệt file hồ sơ: PENDING, APPROVED, REVISION_REQUIRED. */
+    @Builder.Default
+    @Column(name = "review_status", nullable = false, length = 20)
+    private String reviewStatus = "PENDING";
+
+    @Column(name = "review_note", columnDefinition = "text")
+    private String reviewNote;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by_user_id")
+    private User reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private OffsetDateTime reviewedAt;
 }

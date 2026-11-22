@@ -53,6 +53,7 @@ public class PortfolioService {
     private final PortfolioViewMapper viewMapper;
     private final PortfolioFormSupport formSupport;
     private final PortfolioSignedFileWorkflow signedFileWorkflow;
+    private final com.internlink.core.application.placement.dossier.DossierInspector dossierInspector;
     private final com.internlink.core.application.system.notification
                     .PlacementWorkflowNotificationHelper
             notifications;
@@ -211,6 +212,10 @@ public class PortfolioService {
             }
             if ("M02".equals(kind)) {
                 f.setContent(formSupport.followingContent(p, f.getContent()));
+            }
+            if ("M04".equals(kind)) {
+                // GVHD chỉ chấm khi đã kiểm tra đủ hồ sơ sinh viên nộp Khoa.
+                dossierInspector.requireComplete(p);
             }
             validateComplete(kind, f.getContent(), metadataHelper.weekCount(p));
             f.setContent(scoring.prepare(f));

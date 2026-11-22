@@ -64,12 +64,13 @@ class EvaluationServiceTest {
 
         FinalResultMapper finalResultMapper = new FinalResultMapper(studentProfileRepository);
         FinalizationReadinessValidator readinessValidator = new FinalizationReadinessValidator(
-                componentScoreRepository, logbookRepository, reportRepository);
+                componentScoreRepository, logbookRepository, reportRepository, org.mockito.Mockito.mock(com.internlink.core.application.placement.dossier.DossierInspector.class));
         FinalResultNotificationHelper finalResultNotificationHelper =
                 new FinalResultNotificationHelper(auditLogService, notificationService);
         TermEvaluationSummaryBuilder summaryBuilder = new TermEvaluationSummaryBuilder(
                 placementRepository, studentRosterRepository, studentProfileRepository,
-                finalResultRepository, portfolioFormRepository, componentScoreRepository, rubricRepository);
+                finalResultRepository, portfolioFormRepository, componentScoreRepository, rubricRepository,
+                org.mockito.Mockito.mock(com.internlink.core.application.placement.dossier.DossierInspector.class));
         var termScope = new com.internlink.core.application.organization.TermDepartmentScope(
                 studentRosterRepository, placementRepository, org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class));
         FinalResultBatchPublisher batchPublisher = new FinalResultBatchPublisher(

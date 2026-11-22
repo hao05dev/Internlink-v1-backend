@@ -27,6 +27,7 @@ public class ComponentScoreService {
     private final JpaDocumentRepository documents;
     private final JpaUserRepository users;
     private final SecurityGuard security;
+    private final com.internlink.core.application.placement.dossier.DossierInspector dossierInspector;
     private final com.internlink.core.application.system.notification
                     .PlacementWorkflowNotificationHelper
             notifications;
@@ -71,6 +72,10 @@ public class ComponentScoreService {
                             && "STUDENT_FOUND".equals(placement.getSource())
                             && actor.getRole() == UserRole.LECTURER
                             && actor.getId().equals(placement.getLecturer().getId()));
+        }
+        if ("LECTURER".equals(role)) {
+            // Điểm của GVHD chỉ nhập sau khi hồ sơ nộp Khoa đã đủ và được duyệt.
+            dossierInspector.requireComplete(placement);
         }
         var existing =
                 scores.findByPlacementIdAndComponentCode(

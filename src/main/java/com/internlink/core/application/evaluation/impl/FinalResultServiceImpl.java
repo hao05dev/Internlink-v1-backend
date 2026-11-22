@@ -282,6 +282,8 @@ public class FinalResultServiceImpl implements FinalResultService {
             throw new BadRequestException("Kết quả đã công bố chính thức, không thể thay đổi");
         }
 
+        readinessValidator.requireDossierComplete(placement);
+
         List<FacultyEvaluationSummaryResponse> list = getTermEvaluationSummary(placement.getTerm().getId(), facultyAdminId);
         FacultyEvaluationSummaryResponse summary = list.stream()
             .filter(s -> s.getPlacementId().equals(placementId))

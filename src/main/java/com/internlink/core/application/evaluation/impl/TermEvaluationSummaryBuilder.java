@@ -1,6 +1,8 @@
 package com.internlink.core.application.evaluation.impl;
 
 import com.internlink.core.application.evaluation.CtuGradingHelper;
+import com.internlink.core.application.placement.dossier.DossierInspector;
+import com.internlink.core.application.placement.dossier.DossierSnapshot;
 import com.internlink.core.domain.auth.User;
 import com.internlink.core.domain.evaluation.AssessmentComponentScore;
 import com.internlink.core.domain.evaluation.FinalResult;
@@ -31,6 +33,7 @@ public class TermEvaluationSummaryBuilder {
     private final JpaPortfolioFormRepository portfolioFormRepository;
     private final JpaAssessmentComponentScoreRepository componentScoreRepository;
     private final JpaRubricEvaluationRepository rubricRepository;
+    private final DossierInspector dossierInspector;
 
     public List<FacultyEvaluationSummaryResponse> buildSummary(UUID termId, List<InternshipPlacement> placements) {
         List<FacultyEvaluationSummaryResponse> summaryList = new ArrayList<>();
@@ -203,6 +206,8 @@ public class TermEvaluationSummaryBuilder {
                     : ResultStatus.NOT_COMPLETED;
             }
 
+            DossierSnapshot dossier = dossierInspector.inspect(p);
+
             summaryList.add(FacultyEvaluationSummaryResponse.builder()
                 .placementId(p.getId())
                 .studentId(student != null ? student.getId() : null)
@@ -238,6 +243,10 @@ public class TermEvaluationSummaryBuilder {
                 .finalizedAt(finalizedAt)
                 .formM04Status(formM04Status)
                 .formM05Status(formM05Status)
+                .dossierApprovedCount(dossier.approvedCount())
+                .dossierRequiredCount(dossier.requiredCount())
+                .dossierComplete(dossier.isComplete())
+                .dossierMissing(dossier.problems())
                 .build());
         }
 

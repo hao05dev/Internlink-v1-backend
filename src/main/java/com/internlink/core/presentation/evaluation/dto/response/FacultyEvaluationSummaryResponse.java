@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -56,4 +57,11 @@ public class FacultyEvaluationSummaryResponse {
 
     private String formM04Status; // Doanh nghiệp (M-TT-04 / M03 in portfolio)
     private String formM05Status; // Giảng viên (M-TT-05 / M04 in portfolio)
+
+    /** Hồ sơ nộp Khoa: số file bắt buộc đã được GVHD duyệt / tổng số file bắt buộc. */
+    private Integer dossierApprovedCount;
+    private Integer dossierRequiredCount;
+    private Boolean dossierComplete;
+    /** Vấn đề còn lại, vd "M03 chưa nộp", "M01 chờ GVHD duyệt". */
+    private List<String> dossierMissing;
 }
