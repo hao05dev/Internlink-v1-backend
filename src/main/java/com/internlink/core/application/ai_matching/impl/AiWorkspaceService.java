@@ -327,8 +327,11 @@ public class AiWorkspaceService {
                                     row.put("name", s.getSkillName());
                                     row.put("jobsRequiring", demand.get(s.getId()));
                                     // Suppress both the cell and its complement to prevent simple
-                                    // subtraction.
-                                    boolean safe = count >= 5 && studentIds.size() - count >= 5;
+                                    // subtraction. Zero is shown: "no student declared X" singles
+                                    // nobody out and is the clearest gap for the faculty.
+                                    boolean safe =
+                                            (count == 0 || count >= 5)
+                                                    && studentIds.size() - count >= 5;
                                     row.put("confirmedStudents", safe ? count : null);
                                     return row;
                                 })

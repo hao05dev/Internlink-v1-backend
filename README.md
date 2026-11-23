@@ -7,7 +7,11 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.10%2B-009688?logo=fastapi&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-336791?logo=postgresql&logoColor=white)
 
-InternLink quản lý trọn quy trình thực tập tốt nghiệp giữa **sinh viên**, **doanh nghiệp** và **Trường CNTT&TT – Đại học Cần Thơ (CICT)**. Quy trình gồm: tuyển dụng và ứng tuyển, phiếu tiếp nhận, thỏa thuận ba bên, nhật ký tuần, đánh giá của mentor và giảng viên, chấm điểm theo rubric/CLO, và báo cáo thống kê cho khoa.
+InternLink quản lý trọn quy trình thực tập tốt nghiệp giữa **sinh viên**, **doanh nghiệp** và **Trường CNTT&TT – Đại học Cần Thơ (CICT)**. Quy trình gồm:
+
+- tìm nơi thực tập: tin tuyển dụng, AI gợi ý việc làm, phiếu tiếp nhận, giấy giới thiệu;
+- trong kỳ: phân công GVHD, nhật ký tuần, họp, xử lý sự cố;
+- cuối kỳ: hồ sơ nộp Khoa (Mẫu 04, M01–M05), chấm điểm theo phương án đánh giá/CLO, số hóa phiếu đánh giá giấy M-TT-03 bằng AI, công bố kết quả và thống kê.
 
 Hệ thống gồm 3 repo:
 
@@ -15,7 +19,21 @@ Hệ thống gồm 3 repo:
 |---|---|---|
 | **Internlink-v1-backend** (repo này) | API nghiệp vụ, phân quyền, lưu trữ, email, thông báo | Spring Boot 3.3, Java 21, JPA, Flyway, PostgreSQL 16 + pgvector |
 | Internlink-v1-frontend (private) | Cổng web cho 7 vai trò | Next.js 14 App Router, TypeScript, Tailwind CSS, Zustand |
-| Internlink-v1-ai (private) | Trích xuất kỹ năng, gợi ý việc làm, phân tích CV–JD | FastAPI, taxonomy kỹ năng IT (ESCO), Gemini / e5 (tùy chọn) |
+| Internlink-v1-ai (private) | Trích xuất kỹ năng, gợi ý việc làm, phân tích CV–JD, trợ lý CapyLink (RAG trên quy chế), đọc phiếu M-TT-03 | FastAPI, taxonomy kỹ năng IT (ESCO), Gemini / e5 (tùy chọn) |
+
+---
+
+## Hai cách sinh viên có nơi thực tập
+
+Thực tế ở CICT, phần lớn doanh nghiệp không dùng hệ thống của Trường. Họ gửi tin qua email Trường và nhận hồ sơ qua email hoặc form của chính họ. Vì vậy mỗi tin tuyển có một **kênh nhận hồ sơ** (`job_positions.application_method`):
+
+| Kênh | Ai đăng | Sinh viên làm gì | Kết quả được ghi nhận bằng |
+|---|---|---|---|
+| **EXTERNAL** (kênh của DN) | Văn phòng Trường đăng lại tin từ email DN; DN **không có tài khoản** | Bấm "Ứng tuyển qua kênh của DN" để mở link/email của DN; hệ thống đếm lượt quan tâm. Không nộp đơn trong app | SV tạo **Phiếu tiếp nhận** (chọn tin này làm tin nguồn) để được duyệt |
+| **IN_APP** (ứng tuyển trong hệ thống) | DN đối tác có tài khoản tự đăng, Văn phòng Trường duyệt | Nộp đơn trong app; DN xét duyệt, phỏng vấn, gửi offer | Offer được chấp nhận, sau đó ký thỏa thuận 3 bên |
+| Tự tìm (không qua tin) | Không có | Tự liên hệ DN, xin giấy giới thiệu nếu cần | **Phiếu tiếp nhận** |
+
+Cả ba nhánh đều tạo ra một **lần thực tập** (`internship_placements`). Từ đó phần quản lý trong kỳ và cuối kỳ giống nhau. Mentor của DN không bắt buộc có tài khoản: GVHD có thể số hóa phiếu đánh giá giấy của cơ quan (M-TT-03).
 
 ---
 
@@ -34,9 +52,10 @@ flowchart LR
     BE -. tùy chọn .-> CL[ClamAV<br/>quét tệp tải lên]
 ```
 
-- **Backend** chia theo module nghiệp vụ trong `src/main/java/com/internlink/core/application`: `auth`, `student`, `company`, `recruitment`, `placement`, `portfolio`, `evaluation`, `exception_case`, `organization`, `analytics`, `ai_matching`, `system`.
+- **Backend** chia theo module nghiệp vụ trong `src/main/java/com/internlink/core/application`: `auth`, `student`, `company`, `recruitment`, `placement` (gồm hồ sơ nộp Khoa), `portfolio`, `evaluation` (gồm số hóa phiếu M-TT-03), `exception_case`, `organization` (kỳ, kế hoạch TTTT, danh sách SV), `meeting`, `announcement`, `assistant` (trợ lý CapyLink), `analytics`, `ai_matching`, `system`.
 - **Cơ sở dữ liệu** được quản lý bằng Flyway (`src/main/resources/db/migration`), kèm dữ liệu demo. Embedding kỹ năng và tin tuyển dụng được lưu cache theo phiên bản model.
 - **AI service** không truy cập DB. Backend gửi hồ sơ và tin tuyển, AI trả về kỹ năng chuẩn hóa, điểm phù hợp và lời giải thích. Khi AI không chạy, backend vẫn hoạt động; các chức năng AI báo lỗi rõ ràng thay vì làm hỏng luồng chính.
+- **Đọc phiếu M-TT-03**: GVHD chụp phiếu đánh giá giấy của cơ quan, AI (Gemini) đọc 10 tiêu chí và phần nhận xét, GVHD soát, sửa rồi xác nhận. Khi xác nhận, điểm cơ quan được ghi và M03 trong hồ sơ nộp Khoa được duyệt luôn. Cả bản AI đọc và bản GVHD chốt đều được lưu để đo độ chính xác mà không cần gán nhãn tay.
 - **Email** đi qua outbox, có các chế độ `DISABLED` / `REDIRECT` / `ALLOWLIST` / `LIVE` để không gửi nhầm cho người thật khi chạy thử.
 
 ---
@@ -63,13 +82,13 @@ flowchart LR
 
 | Vai trò | Chức năng chính |
 |---|---|
-| **Sinh viên** | Hồ sơ và CV, tìm và lưu việc làm, ứng tuyển, phiếu tiếp nhận (tự tìm nơi thực tập), thỏa thuận 3 bên, nhật ký ngày/tuần, nộp báo cáo cuối kỳ, gợi ý việc làm và phân tích CV–JD bằng AI |
-| **Doanh nghiệp (HR)** | Hồ sơ công ty, đăng tin (khoa duyệt), quản lý ứng viên theo Kanban, mời phỏng vấn, gửi offer, phân công mentor |
-| **Mentor** | Theo dõi và nhận xét nhật ký, đánh giá hằng tuần, đánh giá cuối kỳ |
-| **Giảng viên hướng dẫn** | Giám sát sinh viên, duyệt nhật ký, chấm theo rubric và chuẩn đầu ra CLO |
-| **Ban quản lý thực tập (Khoa)** | Kỳ thực tập, danh sách sinh viên (import Google Sheets), phân công GVHD, duyệt tin và phiếu tiếp nhận, xử lý ngoại lệ, công bố kết quả, thống kê |
-| **Văn phòng Trường** | Tiếp nhận phiếu, giấy giới thiệu, duyệt tin tuyển, bài viết hướng nghiệp |
-| **Quản trị hệ thống** | Người dùng, đơn vị, doanh nghiệp, dung lượng lưu trữ, nhật ký kiểm toán |
+| **Sinh viên** | Hồ sơ và CV, tìm và lưu việc làm, ứng tuyển trong app hoặc qua kênh của DN, phiếu tiếp nhận, giấy giới thiệu, thỏa thuận 3 bên, nhật ký ngày/tuần, họp, nộp hồ sơ nộp Khoa và báo cáo cuối kỳ, gợi ý việc làm và phân tích CV–JD bằng AI, hỏi trợ lý CapyLink |
+| **Doanh nghiệp (HR)** | Hồ sơ công ty, đăng tin (Văn phòng Trường duyệt), quản lý ứng viên theo Kanban, phỏng vấn, offer, ký thỏa thuận 3 bên, phân công mentor |
+| **Mentor** | Theo dõi và nhận xét nhật ký, đánh giá hằng tuần, đánh giá cuối kỳ (không bắt buộc có tài khoản) |
+| **Giảng viên hướng dẫn** | Giám sát sinh viên, duyệt nhật ký, họp Google Meet, duyệt hồ sơ nộp Khoa, chấm theo phương án đánh giá/CLO, quét phiếu M-TT-03 bằng AI |
+| **Ban quản lý thực tập (Khoa)** | Kỳ thực tập, danh sách sinh viên (import Excel/Google Sheets), phân công GVHD, duyệt phiếu tiếp nhận và thỏa thuận, phương án đánh giá, biểu mẫu, xử lý ngoại lệ, công bố kết quả, thống kê và phân tích khoảng trống kỹ năng |
+| **Văn phòng Trường** | Kỳ và kế hoạch TTTT, duyệt doanh nghiệp và tin tuyển, đăng lại tin từ email DN (kênh ngoài), tiếp nhận phiếu, giấy giới thiệu, bài cẩm nang |
+| **Quản trị hệ thống** | Người dùng, đơn vị, doanh nghiệp, kho tri thức CapyLink, quản lý AI, lưu trữ, nhật ký kiểm toán |
 
 ---
 
@@ -89,7 +108,18 @@ Tất cả tài khoản seed dùng mật khẩu chung: **`Password@123`** — đ
 
 ### Bộ dữ liệu demo đầy đủ (đợt "HK1 2026–2027 (Demo)")
 
-Nạp bằng `psql -d internlink_db -f ../scripts/seed_demo_full.sql` (chạy lại an toàn), xoá bằng `../scripts/reset_demo.sql`. Sinh lại từ `scripts/demo_data/build_demo.py`. Cùng mật khẩu chung ở trên. Gồm 60 SV, 8 GV, 12 doanh nghiệp, 48 tin tuyển, 78 đơn ứng tuyển, 34 đợt thực tập (đang thực tập / hoàn thành / chấm dứt), nhật ký tuần–ngày, phiếu đánh giá, 14 bài cẩm nang có ảnh bìa, thông báo, cuộc họp.
+Các script nằm ở `scripts/` của thư mục cha (cạnh 3 repo). Trên Windows chạy `reset-and-seed-demo.ps1` ở thư mục cha; script chạy 6 bước theo thứ tự dưới đây, dừng ngay khi có lỗi. Mỗi file đều chạy lại an toàn.
+
+| Bước | File | Nội dung |
+|---|---|---|
+| 1 | `reset_demo.sql` | Xóa dữ liệu demo cũ, kể cả dữ liệu phát sinh khi thao tác demo |
+| 2 | `seed_demo_full.sql` | Kỳ demo, tài khoản, DN đối tác, tin, đơn, lần thực tập, nhật ký, đánh giá (sinh từ `demo_data/build_demo.py`) |
+| 3 | `seed_demo_dossier.sql` | Hồ sơ nộp Khoa (Mẫu 04, M01–M05) của các lần thực tập demo |
+| 4 | `seed_term_plan_hk1_2026_2027.sql` | Kế hoạch TTTT của kỳ demo |
+| 5 | `seed_real_mail_jobs.sql` | 39 tin thật nhận qua email Trường, kênh ngoài (đã đóng) |
+| 6 | `seed_market_it_companies.sql` | 17 DN IT thật, 23 tin (9 đang mở) do Văn phòng Trường đăng, kênh ngoài |
+
+Cùng mật khẩu chung ở trên. Gồm 60 SV, 8 GV, 12 DN đối tác (có tài khoản, tin ứng tuyển trong app), 48 tin tuyển, 78 đơn ứng tuyển, 34 đợt thực tập (đang thực tập / hoàn thành / chấm dứt), nhật ký tuần–ngày, phiếu đánh giá, hồ sơ nộp Khoa, 14 bài cẩm nang có ảnh bìa, thông báo, cuộc họp. Ngoài ra có 17 DN không có tài khoản, tin của họ do Văn phòng Trường đăng và SV ứng tuyển qua kênh của DN.
 
 | Vai trò | Email | Tình huống |
 |---|---|---|
@@ -148,7 +178,7 @@ docker compose up -d postgres redis
 mvn spring-boot:run
 ```
 
-Flyway tự tạo schema và nạp dữ liệu demo. Swagger UI: `http://localhost:8080/swagger-ui.html`.
+Flyway tự tạo schema và nạp tài khoản seed gốc; bộ dữ liệu demo đầy đủ nạp riêng như mục trên. Swagger UI: `http://localhost:8080/swagger-ui.html`.
 
 **3. AI service — `:8001`**
 
@@ -159,7 +189,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --port 8001
 ```
 
-Hoặc chạy bằng Docker từ repo backend: `docker compose up -d ai-service`. Tài liệu API: `http://localhost:8001/docs`.
+Đọc phiếu M-TT-03 và trợ lý CapyLink dạng hội thoại cần `GEMINI_API_KEY`; không có khóa thì CapyLink chạy chế độ `extractive` (trích nguyên văn quy chế). Hoặc chạy bằng Docker từ repo backend: `docker compose up -d ai-service`. Tài liệu API: `http://localhost:8001/docs`.
 
 **4. Frontend — `:3000`**
 
@@ -178,9 +208,9 @@ Mỗi repo có GitHub Actions chạy trên mọi push và pull request vào `mai
 
 | Repo | Lệnh | Nội dung |
 |---|---|---|
-| Backend | `mvn verify` | ~450 test JUnit/Mockito; test tích hợp chạy trên H2 và PostgreSQL 16 + pgvector (service container trong CI) |
-| Frontend | `npm run lint`, `npx tsc --noEmit`, `npm test` | ESLint, kiểm tra kiểu TypeScript, ~100 file test Vitest |
-| AI | `python -m pytest` | ~110 test pytest trên Python 3.10 và 3.13, gồm test cho benchmark |
+| Backend | `mvn verify` | ~580 test JUnit/Mockito; test tích hợp chạy trên H2 và PostgreSQL 16 + pgvector (service container trong CI) |
+| Frontend | `npm run lint`, `npx tsc --noEmit`, `npm test` | ESLint, kiểm tra kiểu TypeScript, ~130 file test Vitest |
+| AI | `python -m pytest` | ~160 test pytest trên Python 3.10 và 3.13, gồm test cho benchmark |
 
 ---
 

@@ -67,9 +67,9 @@ public class ComponentScoreService {
                                     && actor.getRole() == UserRole.LECTURER
                                     && actor.getId().equals(placement.getLecturer().getId())));
         } else {
+            // Phiếu M-TT-03 giấy niêm phong áp dụng cho mọi nơi thực tập; GVHD nhập thay cơ quan.
             ResourceAuthorization.require(
                     "COMPANY_MENTOR".equals(role)
-                            && "STUDENT_FOUND".equals(placement.getSource())
                             && actor.getRole() == UserRole.LECTURER
                             && actor.getId().equals(placement.getLecturer().getId()));
         }

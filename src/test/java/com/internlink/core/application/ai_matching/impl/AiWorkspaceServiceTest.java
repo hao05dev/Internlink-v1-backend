@@ -186,6 +186,58 @@ class AiWorkspaceServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void skillNobodyHasIsShownAsZeroWhileSmallGroupsStayHidden() {
+        User admin = actor(UserRole.FACULTY_ADMIN);
+        Department department = Department.builder().build();
+        department.setId(UUID.randomUUID());
+        admin.setDepartment(department);
+        UUID termId = UUID.randomUUID();
+        when(terms.findById(termId)).thenReturn(Optional.of(InternshipTerm.builder().build()));
+        List<StudentRoster> roster = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            User student = User.builder().role(UserRole.STUDENT).build();
+            student.setId(UUID.randomUUID());
+            roster.add(StudentRoster.builder().claimedUser(student).build());
+        }
+        when(termScope.rosters(eq(termId), any())).thenReturn(roster);
+        SkillTaxonomy flutter = SkillTaxonomy.builder().id("SK-FLUTTER").skillName("Flutter").build();
+        SkillTaxonomy csharp = SkillTaxonomy.builder().id("SK-CSHARP").skillName("C#").build();
+        when(skills.findByIdStudentIdAndIsConfirmedTrue(any())).thenReturn(List.of());
+        UUID firstStudent = roster.get(0).getClaimedUser().getId();
+        UUID secondStudent = roster.get(1).getClaimedUser().getId();
+        for (UUID id : List.of(firstStudent, secondStudent))
+            when(skills.findByIdStudentIdAndIsConfirmedTrue(id))
+                    .thenReturn(List.of(StudentSkill.builder().skill(csharp).build()));
+        JobPosition job = JobPosition.builder().build();
+        job.setId(UUID.randomUUID());
+        when(jobs.findByTermIdAndStatus(termId, JobStatus.APPROVED)).thenReturn(List.of(job));
+        when(jobSkills.findByIdJobIdIn(List.of(job.getId())))
+                .thenReturn(
+                        List.of(
+                                com.internlink.core.domain.recruitment.JobSkill.builder()
+                                        .skill(flutter)
+                                        .requirementType(RequirementType.MANDATORY)
+                                        .build(),
+                                com.internlink.core.domain.recruitment.JobSkill.builder()
+                                        .skill(csharp)
+                                        .requirementType(RequirementType.MANDATORY)
+                                        .build()));
+        when(taxonomy.findAll()).thenReturn(List.of(flutter, csharp));
+
+        var rows = (List<Map<String, Object>>) service.skillGaps(termId).get("skills");
+
+        assertThat(rows)
+                .filteredOn(r -> r.get("id").equals("SK-FLUTTER"))
+                .singleElement()
+                .satisfies(r -> assertThat(r.get("confirmedStudents")).isEqualTo(0L));
+        assertThat(rows)
+                .filteredOn(r -> r.get("id").equals("SK-CSHARP"))
+                .singleElement()
+                .satisfies(r -> assertThat(r.get("confirmedStudents")).isNull());
+    }
+
+    @Test
     void journalAuthorizationRunsBeforeInference() {
         UUID id = UUID.randomUUID();
         when(logbooks.getLogbooksByPlacement(id)).thenThrow(new ForbiddenException("Denied"));

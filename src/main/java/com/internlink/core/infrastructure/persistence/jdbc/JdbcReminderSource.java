@@ -132,6 +132,34 @@ WITH placements AS (
     SELECT m.organizer_id,m.id::text,'MEETING_REMINDER','Sắp đến giờ họp: '||m.title,'/lecturer/meetings',m.start_at
     FROM meetings m WHERE m.status='SCHEDULED' AND m.start_at>CURRENT_TIMESTAMP
     UNION ALL
+    -- Các mốc trong Kế hoạch TTTT do VP Trường công bố (term_milestones); chưa công bố thì không nhắc.
+    SELECT r.claimed_user_id,m.id::text,'ACCEPTANCE_FORM_DEADLINE','Nhắc nộp phiếu tiếp nhận thực tập','/student/acceptance-form',m.end_at
+    FROM term_milestones m JOIN internship_terms t ON t.id=m.term_id JOIN student_rosters r ON r.term_id=t.id
+    WHERE m.kind='ACCEPTANCE_FORM_DUE' AND m.end_at IS NOT NULL AND t.plan_published_at IS NOT NULL
+        AND t.status NOT IN ('DRAFT','CLOSED') AND r.claimed_user_id IS NOT NULL
+        AND (m.required_weeks IS NULL OR r.internship_credits IS NULL
+            OR m.required_weeks=CASE WHEN r.internship_credits=5 THEN 12 ELSE 8 END)
+        AND NOT EXISTS(SELECT 1 FROM internship_placements p WHERE p.term_id=t.id AND p.student_id=r.claimed_user_id
+            AND p.status NOT IN ('TERMINATED','TRANSFERRED'))
+        AND NOT EXISTS(SELECT 1 FROM student_found_applications a WHERE a.student_id=r.claimed_user_id AND a.term_id=t.id
+            AND a.status IN ('SUBMITTED','RECEIVED','APPROVED','PUBLISHED'))
+    UNION ALL
+    SELECT u.id,m.id::text,'ACCEPTANCE_REVIEW_REMINDER','Phiếu tiếp nhận chờ Khoa duyệt','/faculty/acceptance-forms',m.end_at
+    FROM term_milestones m JOIN internship_terms t ON t.id=m.term_id
+    JOIN users u ON u.role='FACULTY_ADMIN'
+    WHERE m.kind='FACULTY_REVIEW_DUE' AND m.end_at IS NOT NULL AND t.plan_published_at IS NOT NULL
+        AND t.status NOT IN ('DRAFT','CLOSED')
+        AND EXISTS(SELECT 1 FROM student_found_applications a JOIN users st ON st.id=a.student_id
+            WHERE a.term_id=t.id AND a.status='RECEIVED' AND st.department_id=u.department_id)
+    UNION ALL
+    SELECT u.id,m.id::text,'LIST_PUBLISH_REMINDER','Nhắc công bố danh sách SV đủ điều kiện TTTT','/faculty/acceptance-forms',
+        coalesce(m.start_at,m.end_at)
+    FROM term_milestones m JOIN internship_terms t ON t.id=m.term_id
+    JOIN users u ON u.role='FACULTY_ADMIN'
+    WHERE m.kind='LIST_PUBLISH' AND t.plan_published_at IS NOT NULL AND t.status NOT IN ('DRAFT','CLOSED')
+        AND EXISTS(SELECT 1 FROM student_found_applications a JOIN users st ON st.id=a.student_id
+            WHERE a.term_id=t.id AND a.status='APPROVED' AND st.department_id=u.department_id)
+    UNION ALL
     SELECT u.id,'email/'||CURRENT_DATE::text,'SYSTEM_EMAIL_ERROR','Có email cần đối soát','/admin/notifications/email',CURRENT_DATE::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
     FROM users u WHERE u.role='ADMIN' AND EXISTS(SELECT 1 FROM email_outbox WHERE status IN ('FAILED','UNKNOWN')
         AND created_at>CURRENT_TIMESTAMP-INTERVAL '24 hours')
