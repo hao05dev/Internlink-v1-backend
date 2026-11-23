@@ -173,6 +173,40 @@ class SystemServiceTest {
         }
     }
 
+    @Test
+    void placementReportUploadRejectsOversizeAndWrongFormat() {
+        User student = user(UserRole.STUDENT);
+        com.internlink.core.domain.placement.InternshipPlacement placement =
+                com.internlink.core.domain.placement.InternshipPlacement.builder().student(student).build();
+        placement.setId(UUID.randomUUID());
+        when(securityGuard.currentUser()).thenReturn(CustomUserDetail.create(student));
+        when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
+        when(placementRepository.findById(placement.getId())).thenReturn(Optional.of(placement));
+
+        org.springframework.web.multipart.MultipartFile oversize =
+                mock(org.springframework.web.multipart.MultipartFile.class);
+        when(oversize.isEmpty()).thenReturn(false);
+        when(oversize.getSize()).thenReturn(20L * 1024 * 1024 + 1);
+        assertThatThrownBy(() -> documentService.uploadDocument(
+                student.getId(), ContextType.PLACEMENT, placement.getId(), DocumentType.REPORT, oversize))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("20 MiB");
+
+        MockMultipartFile fakePdf = new MockMultipartFile(
+                "file", "bao-cao.pdf", "application/pdf", "MZ not really a pdf".getBytes());
+        assertThatThrownBy(() -> documentService.uploadDocument(
+                student.getId(), ContextType.PLACEMENT, placement.getId(), DocumentType.REPORT, fakePdf))
+                .isInstanceOf(BadRequestException.class);
+
+        MockMultipartFile exe = new MockMultipartFile(
+                "file", "bao-cao.exe", "application/octet-stream", "MZ".getBytes());
+        assertThatThrownBy(() -> documentService.uploadDocument(
+                student.getId(), ContextType.PLACEMENT, placement.getId(), DocumentType.REPORT, exe))
+                .isInstanceOf(BadRequestException.class);
+        verify(storageServiceRouter, never()).getActiveStorageService();
+        verify(documentRepository, never()).save(any());
+    }
+
     private User user(UserRole role) {
         User value = User.builder().email(UUID.randomUUID() + "@example.com").passwordHash("hash").fullName("User").role(role).build();
         value.setId(UUID.randomUUID());

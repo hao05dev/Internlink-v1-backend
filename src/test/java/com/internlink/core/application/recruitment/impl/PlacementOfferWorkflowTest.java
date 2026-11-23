@@ -82,6 +82,33 @@ class PlacementOfferWorkflowTest extends RecruitmentTestFixture {
     }
 
     @Test
+    void declinedOfferReturnsJobSlot() {
+        RedisJobSlotService slots = mock(RedisJobSlotService.class);
+        PlacementOfferServiceImpl service = new PlacementOfferServiceImpl(
+                offerRepository, applicationRepository, jobRepository, studentRosterRepository,
+                userRepository, placementEligibility, securityGuard, auditLogService,
+                notificationService, slots);
+        JobApplication application = application(ApplicationStatus.OFFERED);
+        PlacementOffer offer =
+                PlacementOffer.builder()
+                        .application(application)
+                        .startDate(LocalDate.now().plusDays(1))
+                        .endDate(LocalDate.now().plusMonths(3))
+                        .expiresAt(OffsetDateTime.now().plusDays(1))
+                        .status(OfferStatus.SENT)
+                        .termsSnapshot(Map.of())
+                        .build();
+        offer.setId(UUID.randomUUID());
+        when(offerRepository.findById(offer.getId())).thenReturn(Optional.of(offer));
+        when(securityGuard.currentUser())
+                .thenReturn(CustomUserDetail.create(application.getStudent()));
+
+        service.respondToOffer(offer.getId(), OfferStatus.DECLINED);
+
+        verify(slots).releaseSlot(application.getJob().getId());
+    }
+
+    @Test
     void studentCannotSetAdministrativeOfferStatus() {
         PlacementOffer offer =
                 PlacementOffer.builder()
