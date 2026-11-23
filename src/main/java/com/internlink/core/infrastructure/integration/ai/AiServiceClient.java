@@ -51,9 +51,13 @@ public class AiServiceClient {
         } catch (WebClientResponseException ex) {
             // Return only known parser errors, never an upstream message containing CV text.
             String code = "ai_unavailable";
+            int status = ex.getStatusCode().value();
             for (String known : List.of("ocr_required", "encrypted_pdf", "unsupported_document_type",
-                    "document_too_large", "document_text_too_large", "unreadable_document", "too_many_pages")) {
-                if (ex.getStatusCode().value() == 422 && ex.getResponseBodyAsString().contains("\"" + known + "\"")) code = known;
+                    "document_too_large", "document_text_too_large", "unreadable_document", "too_many_pages", "invalid_base64")) {
+                if (status == 422 && ex.getResponseBodyAsString().contains("\"" + known + "\"")) code = known;
+            }
+            for (String known : List.of("form_reader_disabled", "form_reader_failed")) {
+                if (status == 503 && ex.getResponseBodyAsString().contains("\"" + known + "\"")) code = known;
             }
             return Map.of("status", "FAILED", "error_code", code);
         } catch (Exception ex) {
@@ -81,6 +85,11 @@ public class AiServiceClient {
     public Map<String, Object> extractKnowledge(String name, String base64, String title) {
         return infer("/api/v1/assistant/extract-knowledge",
             Map.of("filename", name, "content_base64", base64, "title", title == null ? "" : title), Duration.ofSeconds(60));
+    }
+
+    /** Đọc ảnh Phiếu đánh giá của cơ quan (M-TT-03); model đa phương thức có thể mất 10–40 giây. */
+    public Map<String, Object> readM03(String mimeType, String base64) {
+        return infer("/api/v1/assistance/read-m03", Map.of("mime_type", mimeType, "content_base64", base64), Duration.ofSeconds(60));
     }
 
     public Map<String, Object> parseRubric(String name, String base64) {
