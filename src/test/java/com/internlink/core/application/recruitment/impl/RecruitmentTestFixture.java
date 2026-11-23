@@ -121,7 +121,8 @@ abstract class RecruitmentTestFixture {
                         new JobApplicationSubmissionValidator(
                                 applicationRepository, documentRepository, studentProfileRepository,
                                 studentRosterRepository, offerRepository),
-                        new JobApplicationMapper());
+                        new JobApplicationMapper(),
+                        studentProfileRepository);
 
         placementEligibility = new PlacementEligibilityService(
                 placementRepository, studentRosterRepository, offerRepository);

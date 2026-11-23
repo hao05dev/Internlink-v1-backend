@@ -50,6 +50,7 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     private final InterviewInvitationNotifier interviewNotifier;
     private final JobApplicationSubmissionValidator submissionValidator;
     private final JobApplicationMapper mapper;
+    private final com.internlink.core.infrastructure.persistence.jpa.JpaStudentProfileRepository studentProfiles;
 
     @Override
     @Transactional(readOnly = true)
@@ -100,9 +101,12 @@ public class JobApplicationServiceImpl implements JobApplicationService {
     public List<JobApplicationResponse> getApplicationsForMyCompany() {
         User actor = currentActor();
         ResourceAuthorization.require(actor.getRole() == UserRole.COMPANY_REP && actor.getCompany() != null);
-        return applicationRepository.findByJobCompanyId(actor.getCompany().getId()).stream()
-            .map(mapper::map)
-            .toList();
+        List<JobApplication> rows = applicationRepository.findByJobCompanyId(actor.getCompany().getId());
+        // Một lần truy vấn hồ sơ SV cho cả danh sách: DN cần MSSV và ngành để lọc, xuất Excel.
+        var profiles = new java.util.HashMap<UUID, com.internlink.core.domain.student.StudentProfile>();
+        studentProfiles.findAllById(rows.stream().map(a -> a.getStudent().getId()).distinct().toList())
+            .forEach(p -> profiles.put(p.getUserId(), p));
+        return rows.stream().map(a -> mapper.map(a, profiles.get(a.getStudent().getId()))).toList();
     }
 
     @Override

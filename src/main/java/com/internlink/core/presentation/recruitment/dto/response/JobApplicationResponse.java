@@ -24,6 +24,9 @@ public class JobApplicationResponse {
     private UUID studentId;
     private String studentName;
     private String studentEmail;
+    /** Chỉ có trong danh sách ứng viên của DN. */
+    private String studentCode;
+    private String programName;
     private UUID submittedCvDocumentId;
     private String coverLetter;
     private Map<String, Object> aiMatchDetail;

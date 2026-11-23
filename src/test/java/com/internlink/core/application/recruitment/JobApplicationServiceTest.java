@@ -77,7 +77,8 @@ class JobApplicationServiceTest {
             new com.internlink.core.application.recruitment.impl.JobApplicationSubmissionValidator(
                 applicationRepository, documentRepository, studentProfileRepository,
                 studentRosterRepository, offerRepository),
-            new com.internlink.core.application.recruitment.impl.JobApplicationMapper()
+            new com.internlink.core.application.recruitment.impl.JobApplicationMapper(),
+            studentProfileRepository
         );
 
         department = Department.builder().name("Khoa CNTT").code("DI").build();
@@ -142,6 +143,27 @@ class JobApplicationServiceTest {
         when(userDetail.getId()).thenReturn(actor.getId());
         when(securityGuard.currentUser()).thenReturn(userDetail);
         when(userRepository.findById(actor.getId())).thenReturn(Optional.of(actor));
+    }
+
+    @Test
+    @DisplayName("Danh sách ứng viên của DN kèm MSSV và ngành để xuất Excel")
+    void companyApplicantsIncludeStudentCodeAndProgram() {
+        mockCurrentActor(companyUser);
+        var program = com.internlink.core.domain.organization.AcademicProgram.builder()
+            .name("Công nghệ thông tin").build();
+        var profile = com.internlink.core.domain.student.StudentProfile.builder()
+            .userId(studentUser.getId()).studentCode("B2110940").program(program).build();
+        when(applicationRepository.findByJobCompanyId(company.getId())).thenReturn(java.util.List.of(application));
+        when(studentProfileRepository.findAllById(java.util.List.of(studentUser.getId())))
+            .thenReturn(java.util.List.of(profile));
+
+        var rows = service.getApplicationsForMyCompany();
+
+        assertThat(rows).singleElement().satisfies(row -> {
+            assertThat(row.getStudentCode()).isEqualTo("B2110940");
+            assertThat(row.getProgramName()).isEqualTo("Công nghệ thông tin");
+            assertThat(row.getStudentEmail()).isEqualTo("an@student.ctu.edu.vn");
+        });
     }
 
     @Test

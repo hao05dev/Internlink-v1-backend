@@ -1,6 +1,7 @@
 package com.internlink.core.application.recruitment.impl;
 
 import com.internlink.core.domain.recruitment.JobApplication;
+import com.internlink.core.domain.student.StudentProfile;
 import com.internlink.core.presentation.recruitment.dto.response.*;
 import com.internlink.core.shared.enums.*;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,16 @@ import java.util.*;
 
 @Component
 public class JobApplicationMapper {
+    /** Bản cho DN: kèm MSSV và ngành từ hồ sơ SV (có thể null nếu SV chưa có hồ sơ). */
+    public JobApplicationResponse map(JobApplication entity, StudentProfile profile) {
+        JobApplicationResponse response = map(entity);
+        if (profile != null) {
+            response.setStudentCode(profile.getStudentCode());
+            response.setProgramName(profile.getProgram() != null ? profile.getProgram().getName() : null);
+        }
+        return response;
+    }
+
     public JobApplicationResponse map(JobApplication entity) {
         var rounds = new ArrayList<InterviewRoundDto>();
         if (entity.getInterviewRounds() != null)
