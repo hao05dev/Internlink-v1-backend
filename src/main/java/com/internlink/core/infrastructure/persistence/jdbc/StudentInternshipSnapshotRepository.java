@@ -24,7 +24,12 @@ public class StudentInternshipSnapshotRepository {
     public record Profile(String fullName, String email, String studentCode, String programName) {}
 
     public record Enrollment(String termName, String studentCode, boolean letterReceived,
-                             String lecturerName, String lecturerEmail) {}
+                             String lecturerName, String lecturerEmail, Integer internshipCredits) {
+        public Enrollment(String termName, String studentCode, boolean letterReceived,
+                          String lecturerName, String lecturerEmail) {
+            this(termName, studentCode, letterReceived, lecturerName, lecturerEmail, null);
+        }
+    }
 
     public record Placement(UUID id, String companyName, String status, LocalDate startDate, LocalDate endDate,
                             String lecturerName, String lecturerEmail, String mentorName, String mentorEmail) {}
@@ -40,12 +45,13 @@ public class StudentInternshipSnapshotRepository {
     public Optional<Enrollment> latestEnrollment(UUID userId) {
         // GVHD lấy theo tài khoản được phân công; chưa liên kết tài khoản thì dùng tên/email trong danh sách Khoa gửi.
         return jdbc.query("SELECT t.term_name, r.student_code, r.letter_received,"
-                        + " COALESCE(l.full_name, r.lecturer_name), COALESCE(l.email, r.lecturer_email)"
+                        + " COALESCE(l.full_name, r.lecturer_name), COALESCE(l.email, r.lecturer_email),"
+                        + " r.internship_credits"
                         + " FROM student_rosters r JOIN internship_terms t ON t.id = r.term_id"
                         + " LEFT JOIN users l ON l.id = r.assigned_lecturer_id WHERE r.claimed_user_id = ?"
                         + " ORDER BY t.start_date DESC NULLS LAST LIMIT 1",
                 (rs, i) -> new Enrollment(rs.getString(1), rs.getString(2), rs.getBoolean(3),
-                        rs.getString(4), rs.getString(5)), userId)
+                        rs.getString(4), rs.getString(5), (Integer) rs.getObject(6, Integer.class)), userId)
                 .stream().findFirst();
     }
 

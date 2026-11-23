@@ -3,6 +3,7 @@ package com.internlink.core.application.assistant;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.internlink.core.infrastructure.persistence.jdbc.AssistantTermInfoRepository;
+import com.internlink.core.infrastructure.persistence.jdbc.AssistantTermInfoRepository.Milestone;
 import com.internlink.core.infrastructure.persistence.jdbc.AssistantTermInfoRepository.Term;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -44,11 +45,18 @@ public class AssistantTermInfoProvider {
 
     private List<Map<String, Object>> load() {
         List<Term> terms = repository.publishedTerms(8);
-        Map<UUID, List<String>> forms = repository.activeForms(terms.stream().map(Term::id).toList());
-        return terms.stream().map(t -> toRow(t, forms.getOrDefault(t.id(), List.of()))).toList();
+        List<UUID> ids = terms.stream().map(Term::id).toList();
+        Map<UUID, List<String>> forms = repository.activeForms(ids);
+        Map<UUID, List<Milestone>> plans = repository.publishedPlans(ids);
+        return terms.stream().map(t -> toRow(t, forms.getOrDefault(t.id(), List.of()),
+                plans.getOrDefault(t.id(), List.of()))).toList();
     }
 
     Map<String, Object> toRow(Term term, List<String> forms) {
+        return toRow(term, forms, List.of());
+    }
+
+    Map<String, Object> toRow(Term term, List<String> forms, List<Milestone> plan) {
         Map<String, Object> row = new HashMap<>();
         row.put("code", term.code());
         row.put("name", term.name());
@@ -62,6 +70,23 @@ public class AssistantTermInfoProvider {
         row.put("evaluation_deadline", date(term.evaluationDeadline()));
         row.put("rules", rules(term.settingsJson()));
         row.put("forms", forms);
+        row.put("plan", plan.stream().map(AssistantTermInfoProvider::milestone).toList());
+        return row;
+    }
+
+    /**
+     * Một mốc Kế hoạch TTTT: ngày ISO (giờ VN) để trợ lý tự tính "còn bao nhiêu ngày", kèm cách xử lý quá hạn
+     * của mốc hạn nộp Phiếu tiếp nhận.
+     */
+    static Map<String, Object> milestone(Milestone m) {
+        Map<String, Object> row = new HashMap<>();
+        row.put("kind", m.kind());
+        row.put("label", m.label());
+        if (m.note() != null && !m.note().isBlank()) row.put("note", m.note());
+        if (m.startAt() != null) row.put("start", m.startAt().atZoneSameInstant(VN).toLocalDate().toString());
+        if (m.endAt() != null) row.put("end", m.endAt().atZoneSameInstant(VN).toLocalDate().toString());
+        if (m.requiredWeeks() != null) row.put("required_weeks", m.requiredWeeks());
+        if ("ACCEPTANCE_FORM_DUE".equals(m.kind())) row.put("late_policy", m.latePolicy());
         return row;
     }
 

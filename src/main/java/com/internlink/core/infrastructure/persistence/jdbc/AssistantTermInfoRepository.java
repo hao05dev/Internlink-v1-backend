@@ -38,6 +38,29 @@ public class AssistantTermInfoRepository {
                         rs.getObject(12, OffsetDateTime.class), rs.getString(13)), limit);
     }
 
+    public record Milestone(String kind, String label, String note, OffsetDateTime startAt, OffsetDateTime endAt,
+                            Integer requiredWeeks, String latePolicy) {}
+
+    /**
+     * Các mốc trong Kế hoạch TTTT, chỉ của kỳ đã công bố kế hoạch (bản nháp của VP Trường không lộ ra), khoá theo term_id.
+     */
+    public Map<UUID, List<Milestone>> publishedPlans(List<UUID> termIds) {
+        Map<UUID, List<Milestone>> plans = new LinkedHashMap<>();
+        if (termIds.isEmpty()) return plans;
+        String placeholders = String.join(",", termIds.stream().map(id -> "?").toList());
+        jdbc.query("SELECT m.term_id, m.kind, m.label, m.note, m.start_at, m.end_at, m.required_weeks, m.late_policy"
+                        + " FROM term_milestones m JOIN internship_terms t ON t.id = m.term_id"
+                        + " WHERE t.plan_published_at IS NOT NULL AND m.term_id IN (" + placeholders + ")"
+                        + " ORDER BY m.term_id, m.sort_order, m.start_at NULLS LAST, m.end_at NULLS LAST",
+                rs -> {
+                    List<Milestone> list = plans.computeIfAbsent(rs.getObject(1, UUID.class), k -> new java.util.ArrayList<>());
+                    if (list.size() < 40) list.add(new Milestone(rs.getString(2), rs.getString(3), rs.getString(4),
+                            rs.getObject(5, OffsetDateTime.class), rs.getObject(6, OffsetDateTime.class),
+                            (Integer) rs.getObject(7, Integer.class), rs.getString(8)));
+                }, termIds.toArray());
+        return plans;
+    }
+
     /** Tên các biểu mẫu đang hiệu lực của từng kỳ (mỗi kỳ tối đa 20), khoá theo term_id. */
     public Map<UUID, List<String>> activeForms(List<UUID> termIds) {
         Map<UUID, List<String>> forms = new LinkedHashMap<>();

@@ -7,6 +7,8 @@ import com.internlink.core.shared.enums.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,8 @@ import java.util.UUID;
 public class AssistantChatService {
     static final String UNAVAILABLE = "CapyLink đang tạm nghỉ một chút. Bạn thử lại sau ít phút, hoặc xem mục "
             + "Cẩm nang thực tập và trang Việc làm trong lúc chờ nhé.";
+
+    private static final ZoneId VN = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final AiServiceClient ai;
     private final AssistantKnowledgeProvider knowledge;
@@ -41,6 +45,8 @@ public class AssistantChatService {
         body.put("jobs", knowledge.openJobs());
         // Dữ liệu công khai do VP Trường công bố (lịch, quy định chung của kỳ) — ai cũng xem được.
         body.put("terms", termInfo.publishedTerms());
+        // Ngày hiện tại theo giờ VN để trợ lý nói "còn N ngày / đã quá hạn" với các mốc kế hoạch.
+        body.put("today", LocalDate.now(VN).toString());
         Map<String, Object> trends = knowledge.trendSnapshot();
         if (trends != null) body.put("trends", trends);
         if (user != null && user.getRole() == UserRole.STUDENT) {

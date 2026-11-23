@@ -2,6 +2,7 @@ package com.internlink.core.application.assistant;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.internlink.core.infrastructure.persistence.jdbc.AssistantTermInfoRepository;
+import com.internlink.core.infrastructure.persistence.jdbc.AssistantTermInfoRepository.Milestone;
 import com.internlink.core.infrastructure.persistence.jdbc.AssistantTermInfoRepository.Term;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +38,22 @@ class AssistantTermInfoProviderTest {
         assertThat(row.get("internship_period")).isEqualTo("15/11/2026 – 13/02/2027");
         assertThat(row.get("application_deadline")).isNull();
         assertThat(row.get("forms")).isEqualTo(List.of("M-TT-01 (bắt buộc)"));
+    }
+
+    @Test
+    void planMilestonesUseVietnamDatesAndKeepLatePolicyOnlyForAcceptanceDeadline() {
+        var due = new Milestone("ACCEPTANCE_FORM_DUE", "Hạn nộp Phiếu tiếp nhận", null, null,
+                OffsetDateTime.of(2026, 12, 5, 16, 59, 0, 0, ZoneOffset.UTC), 8, "LOCK"); // = 23:59 05/12 giờ VN
+        var briefing = new Milestone("PROCESS_BRIEFING", "Phổ biến quy trình", "Hội trường 1",
+                OffsetDateTime.of(2026, 11, 19, 17, 30, 0, 0, ZoneOffset.UTC), null, null, "ALLOW_LATE"); // = 00:30 20/11
+
+        @SuppressWarnings("unchecked")
+        var plan = (List<Map<String, Object>>) provider.toRow(term(null), List.of(), List.of(due, briefing)).get("plan");
+
+        assertThat(plan.get(0)).containsEntry("end", "2026-12-05").containsEntry("required_weeks", 8)
+                .containsEntry("late_policy", "LOCK").doesNotContainKey("start");
+        assertThat(plan.get(1)).containsEntry("start", "2026-11-20").containsEntry("note", "Hội trường 1")
+                .doesNotContainKey("late_policy");
     }
 
     @Test

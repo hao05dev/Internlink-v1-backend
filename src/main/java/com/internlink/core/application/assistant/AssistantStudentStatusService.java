@@ -1,5 +1,6 @@
 package com.internlink.core.application.assistant;
 
+import com.internlink.core.domain.placement.InternshipDurationRule;
 import com.internlink.core.infrastructure.persistence.jdbc.StudentInternshipSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,12 @@ public class AssistantStudentStatusService {
         Optional<StudentInternshipSnapshotRepository.Enrollment> enrollment = snapshots.latestEnrollment(userId);
         enrollment.ifPresentOrElse(e -> {
             items.add(item("term", "Đợt thực tập", e.termName()));
+            Integer credits = e.internshipCredits();
+            if (credits != null && (credits == 2 || credits == 3 || credits == 5)) {
+                // Trợ lý dùng số tuần để chọn đúng mốc kế hoạch dành cho học phần 8 hoặc 12 tuần.
+                items.add(item("course", "Học phần thực tập", credits + " tín chỉ — "
+                        + InternshipDurationRule.requiredWeeks(credits) + " tuần"));
+            }
             items.add(item("letter", "Giấy giới thiệu", e.letterReceived()
                     ? "Doanh nghiệp đã nhận giấy giới thiệu" : "Chưa ghi nhận giấy giới thiệu"));
             addIfPresent(own, e.studentCode());

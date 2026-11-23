@@ -60,6 +60,13 @@ class AssistantStudentStatusServiceTest {
     }
 
     @Test
+    void courseLengthIsSharedSoTheAssistantPicksTheRightMilestone() {
+        base(Optional.of(new Enrollment("HK hè", "B2100001", false, null, null, 5)), Optional.empty());
+
+        assertThat(byKey(service.forStudent(userId)).get("course")).isEqualTo("5 tín chỉ — 12 tuần");
+    }
+
+    @Test
     void lecturerFallsBackToRosterWithMatchingEmail() {
         base(Optional.of(new Enrollment("HK hè", "B2100001", false, "TS. Roster", "roster@ctu.edu.vn")),
                 Optional.of(new Placement(UUID.randomUUID(), "ABC", "PREPARING", null, null,
