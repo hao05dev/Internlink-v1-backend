@@ -32,4 +32,7 @@ public class InternshipTermResponse {
     private TermStatus status;
     private Map<String, Object> settings;
     private OffsetDateTime createdAt;
+    /** Kế hoạch TTTT do VP Trường công bố (null = chưa công bố). */
+    private OffsetDateTime planPublishedAt;
+    private String planDocumentRef;
 }

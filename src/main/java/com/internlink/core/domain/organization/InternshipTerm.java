@@ -57,6 +57,18 @@ public class InternshipTerm extends BaseEntity {
     @Column(name = "status", nullable = false, length = 30)
     private TermStatus status = TermStatus.DRAFT;
 
+    /** Số hiệu văn bản kế hoạch TTTT của Trường, vd. "349/CNTT&TT-GV". */
+    @Column(name = "plan_document_ref", length = 100)
+    private String planDocumentRef;
+
+    /** Thời điểm VP Trường công bố kế hoạch; null = SV/Khoa chưa thấy kế hoạch. */
+    @Column(name = "plan_published_at")
+    private OffsetDateTime planPublishedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_published_by_user_id")
+    private com.internlink.core.domain.auth.User planPublishedBy;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
     @Column(name = "settings", columnDefinition = "jsonb", nullable = false)

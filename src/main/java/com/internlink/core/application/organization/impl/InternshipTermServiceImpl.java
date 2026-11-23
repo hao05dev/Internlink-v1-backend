@@ -220,6 +220,8 @@ public class InternshipTermServiceImpl implements InternshipTermService {
             .status(entity.getStatus())
             .settings(entity.getSettings())
             .createdAt(entity.getCreatedAt())
+            .planPublishedAt(entity.getPlanPublishedAt())
+            .planDocumentRef(entity.getPlanDocumentRef())
             .build();
     }
 }
