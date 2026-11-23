@@ -55,6 +55,14 @@ public class TermMilestone extends BaseEntity {
     @JdbcTypeCode(SqlTypes.SMALLINT)
     private Integer requiredWeeks;
 
+    /** Khi quá hạn (chỉ áp dụng cho mốc hạn nộp phiếu): cho nộp trễ có đánh dấu, hoặc khóa nộp. */
+    public static final String ALLOW_LATE = "ALLOW_LATE";
+    public static final String LOCK = "LOCK";
+
+    @Builder.Default
+    @Column(name = "late_policy", nullable = false, length = 20)
+    private String latePolicy = ALLOW_LATE;
+
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 }

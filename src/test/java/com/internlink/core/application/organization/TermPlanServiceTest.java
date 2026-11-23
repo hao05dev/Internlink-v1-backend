@@ -29,6 +29,21 @@ class TermPlanServiceTest {
     }
 
     @Test
+    void latePolicyDefaultsToAllowLateAndOnlySticksToTheAcceptanceDeadline() {
+        assertThat(TermPlanService.validated(term, input("ACCEPTANCE_FORM_DUE", "Nộp phiếu", null, d2, null), 0)
+            .getLatePolicy()).isEqualTo(TermMilestone.ALLOW_LATE);
+        assertThat(TermPlanService.validated(term,
+            new TermPlanService.MilestoneInput("ACCEPTANCE_FORM_DUE", "Nộp phiếu", null, null, d2, null, "lock"), 0)
+            .getLatePolicy()).isEqualTo(TermMilestone.LOCK);
+        assertThat(TermPlanService.validated(term,
+            new TermPlanService.MilestoneInput("GRADING", "Chấm", null, d1, d2, null, "LOCK"), 0)
+            .getLatePolicy()).isEqualTo(TermMilestone.ALLOW_LATE);
+        assertThatThrownBy(() -> TermPlanService.validated(term,
+            new TermPlanService.MilestoneInput("ACCEPTANCE_FORM_DUE", "x", null, null, d2, null, "MAYBE"), 0))
+            .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
     void missingKindBecomesOther() {
         assertThat(TermPlanService.validated(term, input(null, "Họp", d1, null, null), 0).getKind())
             .isEqualTo(TermMilestone.OTHER);

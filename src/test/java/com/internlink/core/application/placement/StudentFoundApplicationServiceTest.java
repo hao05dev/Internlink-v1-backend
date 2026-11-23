@@ -43,6 +43,7 @@ class StudentFoundApplicationServiceTest {
     @Mock SecurityGuard security;
     @Mock NotificationService notifications;
     @Mock InternshipPlacementService placementService;
+    @Mock JpaTermMilestoneRepository milestones;
 
     StudentFoundApplicationService studentService;
     AcceptanceFormOfficeService officeService;
@@ -62,7 +63,7 @@ class StudentFoundApplicationServiceTest {
         var notifier = new AcceptanceFormNotifier(notifications, users);
         var eligibility = new PlacementEligibilityService(placements, rosters, null);
         studentService = new StudentFoundApplicationService(applications, placements, rosters, terms, documents,
-            agreements, jobs, lookup, mapper, notifier);
+            agreements, jobs, lookup, mapper, notifier, new AcceptanceFormDeadline(milestones));
         officeService = new AcceptanceFormOfficeService(applications, lookup, mapper, notifier);
         reviewService = new AcceptanceFormReviewService(applications, placements, rosters, terms, users,
             eligibility, placementService, lookup, mapper, notifier,
@@ -128,6 +129,51 @@ class StudentFoundApplicationServiceTest {
         actAs(schoolOffice);
         officeService.confirmDocumentsCollected(app.getId());
         assertThat(app.getDocumentsCollectedAt()).isNotNull();
+    }
+
+    @Test
+    void submittingAfterThePublishedDeadlineIsAllowedButMarkedLate() {
+        publishPlanWithDeadline(java.time.OffsetDateTime.now().minusDays(2), TermMilestone.ALLOW_LATE);
+        var app = createAndSubmit();
+        assertThat(app.getStatus()).isEqualTo(AcceptanceFormStatus.SUBMITTED);
+        assertThat(app.isSubmittedLate()).isTrue();
+        assertThat(app.getSubmittedAt()).isNotNull();
+    }
+
+    @Test
+    void submittingBeforeTheDeadlineIsOnTime() {
+        publishPlanWithDeadline(java.time.OffsetDateTime.now().plusDays(2), TermMilestone.LOCK);
+        var app = createAndSubmit();
+        assertThat(app.isSubmittedLate()).isFalse();
+    }
+
+    @Test
+    void lockedDeadlineRejectsLateSubmission() {
+        publishPlanWithDeadline(java.time.OffsetDateTime.now().minusDays(2), TermMilestone.LOCK);
+        assertThatThrownBy(this::createAndSubmit)
+            .isInstanceOf(BadRequestException.class)
+            .hasMessageContaining("không nhận nộp trễ");
+    }
+
+    @Test
+    void unpublishedPlanDoesNotAffectSubmission() {
+        publishPlanWithDeadline(java.time.OffsetDateTime.now().minusDays(2), TermMilestone.LOCK);
+        term.setPlanPublishedAt(null);
+        assertThat(createAndSubmit().isSubmittedLate()).isFalse();
+    }
+
+    @Test
+    void resubmissionAfterRevisionKeepsTheFirstSubmissionVerdict() {
+        var app = createAndSubmit();
+        var firstSubmittedAt = app.getSubmittedAt();
+        publishPlanWithDeadline(java.time.OffsetDateTime.now().minusDays(2), TermMilestone.LOCK);
+        app.setStatus(AcceptanceFormStatus.REVISION_REQUIRED);
+        var scan = activeDocument(app.getId());
+        when(documents.findById(scan.getId())).thenReturn(Optional.of(scan));
+        studentService.submit(app.getId(), scan.getId());
+        assertThat(app.getStatus()).isEqualTo(AcceptanceFormStatus.SUBMITTED);
+        assertThat(app.isSubmittedLate()).isFalse();
+        assertThat(app.getSubmittedAt()).isEqualTo(firstSubmittedAt);
     }
 
     @Test
@@ -222,6 +268,13 @@ class StudentFoundApplicationServiceTest {
         verify(placementService).activatePlacementFromAgreement(agreement.getId(), lecturer.getId());
         verify(placements, never()).save(any());
         assertThat(app.getStatus()).isEqualTo(AcceptanceFormStatus.APPROVED);
+    }
+
+    private void publishPlanWithDeadline(java.time.OffsetDateTime dueAt, String policy) {
+        term.setPlanPublishedAt(java.time.OffsetDateTime.now().minusDays(30));
+        var due = TermMilestone.builder().term(term).kind(TermMilestone.ACCEPTANCE_FORM_DUE).label("Nộp phiếu")
+            .endAt(dueAt).latePolicy(policy).build();
+        when(milestones.findByTermIdOrderBySortOrderAscStartAtAscEndAtAsc(term.getId())).thenReturn(List.of(due));
     }
 
     private StudentFoundApplication createAndSubmit() {

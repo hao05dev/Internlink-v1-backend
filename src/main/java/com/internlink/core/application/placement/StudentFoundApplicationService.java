@@ -17,6 +17,7 @@ import com.internlink.core.shared.security.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -35,6 +36,7 @@ public class StudentFoundApplicationService {
     private final AcceptanceFormLookup lookup;
     private final AcceptanceFormMapper mapper;
     private final AcceptanceFormNotifier notifier;
+    private final AcceptanceFormDeadline deadline;
 
     @Transactional
     public StudentFoundResponse create(StudentFoundRequest request) {
@@ -91,6 +93,7 @@ public class StudentFoundApplicationService {
             || document.getDocumentType() != DocumentType.ACCEPTANCE_LETTER
             || !document.getOwner().getId().equals(app.getStudent().getId()) || !"ACTIVE".equals(document.getStatus()))
             throw new BadRequestException("Bản scan Phiếu tiếp nhận phải là tài liệu hợp lệ của phiếu này");
+        if (app.getSubmittedAt() == null) markFirstSubmission(app);
         app.setAcceptanceDocument(document);
         app.setStatus(AcceptanceFormStatus.SUBMITTED);
         app.setReviewNote(null);
@@ -99,6 +102,18 @@ public class StudentFoundApplicationService {
         var saved = applications.save(app);
         notifier.submitted(saved);
         return mapper.toResponse(saved);
+    }
+
+    /** Chỉ lần nộp đầu so với hạn; nộp lại sau khi bị yêu cầu bổ sung không bị tính trễ hay khóa. */
+    private void markFirstSubmission(StudentFoundApplication app) {
+        var now = OffsetDateTime.now();
+        var roster = rosters.findByTermIdAndClaimedUserId(app.getTerm().getId(), app.getStudent().getId()).orElse(null);
+        var decision = deadline.check(app.getTerm(), roster != null ? roster.getInternshipCredits() : null, now);
+        if (decision.outcome() == AcceptanceFormDeadline.Outcome.LOCKED)
+            throw new BadRequestException("Đã quá hạn nộp Phiếu tiếp nhận (" + decision.dueDay()
+                + ") và Văn phòng Trường không nhận nộp trễ. Vui lòng liên hệ Văn phòng Trường.");
+        app.setSubmittedAt(now);
+        app.setSubmittedLate(decision.outcome() == AcceptanceFormDeadline.Outcome.LATE);
     }
 
     @Transactional(readOnly = true)

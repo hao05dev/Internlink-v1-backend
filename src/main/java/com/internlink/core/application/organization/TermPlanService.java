@@ -47,13 +47,20 @@ public class TermPlanService {
     private final AuditLogService audit;
 
     public record MilestoneItem(UUID id, String kind, String label, String note,
-                                OffsetDateTime startAt, OffsetDateTime endAt, Integer requiredWeeks, int sortOrder) {}
+                                OffsetDateTime startAt, OffsetDateTime endAt, Integer requiredWeeks, int sortOrder,
+                                String latePolicy) {}
 
     public record TermPlan(UUID termId, String termName, String documentRef, OffsetDateTime publishedAt,
                            boolean editable, List<MilestoneItem> milestones) {}
 
+    /** latePolicy: ALLOW_LATE (mặc định) hoặc LOCK; chỉ giữ cho mốc hạn nộp Phiếu tiếp nhận. */
     public record MilestoneInput(String kind, String label, String note,
-                                 OffsetDateTime startAt, OffsetDateTime endAt, Integer requiredWeeks) {}
+                                 OffsetDateTime startAt, OffsetDateTime endAt, Integer requiredWeeks, String latePolicy) {
+        public MilestoneInput(String kind, String label, String note,
+                              OffsetDateTime startAt, OffsetDateTime endAt, Integer requiredWeeks) {
+            this(kind, label, note, startAt, endAt, requiredWeeks, null);
+        }
+    }
 
     public record SavePlanRequest(String documentRef, List<MilestoneInput> milestones) {}
 
@@ -140,7 +147,12 @@ public class TermPlanService {
         Integer weeks = input.requiredWeeks();
         if (weeks != null && weeks != 8 && weeks != 12)
             throw new BadRequestException("Mốc chỉ áp dụng cho học phần 8 tuần hoặc 12 tuần");
-        return TermMilestone.builder().term(term).kind(kind).label(label)
+        String policy = input.latePolicy() == null || input.latePolicy().isBlank()
+            ? TermMilestone.ALLOW_LATE : input.latePolicy().trim().toUpperCase();
+        if (!TermMilestone.ALLOW_LATE.equals(policy) && !TermMilestone.LOCK.equals(policy))
+            throw new BadRequestException("Cách xử lý khi quá hạn không hợp lệ: " + input.latePolicy());
+        if (!TermMilestone.ACCEPTANCE_FORM_DUE.equals(kind)) policy = TermMilestone.ALLOW_LATE;
+        return TermMilestone.builder().term(term).kind(kind).label(label).latePolicy(policy)
             .note(trimToNull(input.note(), 1000, "Ghi chú")).startAt(input.startAt()).endAt(input.endAt())
             .requiredWeeks(weeks).sortOrder(order).build();
     }
@@ -155,7 +167,7 @@ public class TermPlanService {
     private List<MilestoneItem> items(UUID termId) {
         return milestones.findByTermIdOrderBySortOrderAscStartAtAscEndAtAsc(termId).stream()
             .map(m -> new MilestoneItem(m.getId(), m.getKind(), m.getLabel(), m.getNote(), m.getStartAt(),
-                m.getEndAt(), m.getRequiredWeeks(), m.getSortOrder()))
+                m.getEndAt(), m.getRequiredWeeks(), m.getSortOrder(), m.getLatePolicy()))
             .toList();
     }
 

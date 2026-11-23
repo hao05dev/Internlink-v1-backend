@@ -58,6 +58,13 @@ public class StudentFoundApplication extends BaseEntity {
     /** Tin EXTERNAL mà SV đã ứng tuyển ngoài hệ thống rồi được nhận (chỉ với SELF_FOUND). */
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "source_job_id")
     private JobPosition sourceJob;
+    /** Lần nộp đầu tiên; nộp lại sau yêu cầu bổ sung không làm đổi. */
+    @Column(name = "submitted_at")
+    private OffsetDateTime submittedAt;
+    /** Nộp sau hạn trong Kế hoạch TTTT khi VP Trường cho phép nộp trễ. */
+    @Builder.Default
+    @Column(name = "submitted_late", nullable = false)
+    private boolean submittedLate = false;
     @Column(name = "received_at")
     private OffsetDateTime receivedAt;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "received_by_user_id")

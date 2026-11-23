@@ -16,4 +16,5 @@ public record StudentFoundResponse(UUID id, UUID termId, UUID studentId, String 
     OffsetDateTime updatedAt, OffsetDateTime receivedAt, OffsetDateTime reviewedAt,
     OffsetDateTime publishedAt, OffsetDateTime documentsCollectedAt,
     UUID sourceJobId, String sourceJobTitle, String sourceJobCompanyName,
-    AcceptanceFormDetails details, String studentPhone, String classCode, String courseCode, String programName) {}
+    AcceptanceFormDetails details, String studentPhone, String classCode, String courseCode, String programName,
+    OffsetDateTime submittedAt, boolean submittedLate) {}

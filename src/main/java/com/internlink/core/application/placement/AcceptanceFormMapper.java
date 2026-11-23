@@ -45,7 +45,8 @@ public class AcceptanceFormMapper {
                 a.getWeeklyPlan() != null ? List.copyOf(a.getWeeklyPlan()) : List.of(), a.getOtherSupport()),
             roster != null ? roster.getPhoneNumber() : null, roster != null ? roster.getClassCode() : null,
             roster != null ? roster.getInternshipCourseCode() : null,
-            roster != null && roster.getProgram() != null ? roster.getProgram().getName() : null);
+            roster != null && roster.getProgram() != null ? roster.getProgram().getName() : null,
+            a.getSubmittedAt(), a.isSubmittedLate());
     }
 
     private UUID placementId(StudentFoundApplication a) {
