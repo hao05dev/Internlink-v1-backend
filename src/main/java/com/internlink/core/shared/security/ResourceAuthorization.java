@@ -91,7 +91,7 @@ public final class ResourceAuthorization {
             || actor.getRole() == UserRole.STUDENT && actor.getId().equals(placement.getStudent().getId())
             || actor.getRole() == UserRole.COMPANY_MENTOR && placement.getMentor() != null
                 && actor.getId().equals(placement.getMentor().getId())
-            || actor.getRole() == UserRole.LECTURER && actor.getId().equals(placement.getLecturer().getId())
+            || supervises(actor, placement)
             || placement.getCompany() != null && representsCompany(actor, placement.getCompany().getId())
             || managesDepartment(actor, DepartmentScope.idOf(placement));
     }

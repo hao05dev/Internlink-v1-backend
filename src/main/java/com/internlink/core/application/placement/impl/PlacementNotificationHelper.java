@@ -66,9 +66,10 @@ public class PlacementNotificationHelper {
         return changes;
     }
 
-    public void logAndNotifyStatusChange(InternshipPlacement saved, PlacementStatus previousStatus, PlacementStatus newStatus) {
+    public void logAndNotifyStatusChange(InternshipPlacement saved, PlacementStatus previousStatus,
+                                         PlacementStatus newStatus, UUID actorId) {
         auditLogService.logAction(
-            null,
+            actorId,
             "UPDATE_PLACEMENT_STATUS_" + newStatus.name(),
             "InternshipPlacement",
             saved.getId(),

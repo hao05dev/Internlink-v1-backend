@@ -55,20 +55,6 @@ WITH placements AS (
     JOIN job_positions j ON j.id=a.job_id JOIN internship_terms t ON t.id=j.term_id
     WHERE g.status IN ('DRAFT','PENDING_SIGNATURES') AND g.company_signature IS NULL AND t.status NOT IN ('DRAFT','CLOSED')
     UNION ALL
-    SELECT p.student_id,p.id::text||'/'||w.week_start::date::text,'LOGBOOK_DEADLINE','Nhắc tổng hợp nhật ký tuần','/student/daily-logs',
-        (least(w.week_start::date+6,p.end_date)+(p.grace_days+1)*INTERVAL '1 day')::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
-    FROM placements p CROSS JOIN LATERAL generate_series(p.start_date::timestamp,p.end_date::timestamp,INTERVAL '7 days') w(week_start)
-    WHERE p.status='ACTIVE' AND p.required_logbook_weeks>0 AND NOT EXISTS(SELECT 1 FROM weekly_logbooks l WHERE l.placement_id=p.id
-        AND l.period_start=w.week_start::date AND l.status NOT IN ('DRAFT','REVISION_REQUESTED'))
-    UNION ALL
-    SELECT p.mentor_id,l.id::text,'LOGBOOK_REVIEW_REMINDER','Nhật ký tuần chờ mentor phản hồi','/mentor/weekly-evaluations',
-        (l.period_end+(p.grace_days+2)*INTERVAL '1 day')::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
-    FROM placements p JOIN weekly_logbooks l ON l.placement_id=p.id WHERE l.status='SUBMITTED' AND p.mentor_id IS NOT NULL
-    UNION ALL
-    SELECT p.lecturer_id,l.id::text,'LOGBOOK_REVIEW_REMINDER','Nhật ký tuần chờ giảng viên nhận xét','/lecturer/supervision',
-        (l.period_end+(p.grace_days+3)*INTERVAL '1 day')::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
-    FROM placements p JOIN weekly_logbooks l ON l.placement_id=p.id WHERE l.status='APPROVED_BY_MENTOR' AND l.lecturer_commented_at IS NULL
-    UNION ALL
     SELECT p.mentor_id,d.id::text,'DAILY_REVIEW_REMINDER','Nhật ký ngày chờ xác nhận','/mentor/internship-record',
         (d.work_date+INTERVAL '2 days')::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'
     FROM placements p JOIN daily_journals d ON d.placement_id=p.id WHERE d.status='SUBMITTED' AND p.mentor_id IS NOT NULL

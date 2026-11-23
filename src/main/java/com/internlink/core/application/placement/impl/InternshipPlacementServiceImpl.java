@@ -226,15 +226,16 @@ public class InternshipPlacementServiceImpl implements InternshipPlacementServic
         InternshipPlacement placement = placementRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("InternshipPlacement", "id", id));
         TermGuard.requireNotClosed(placement.getTerm());
+        User actor = currentActor();
         ResourceAuthorization.require(ResourceAuthorization.managesDepartment(
-            currentActor(), DepartmentScope.idOf(placement)));
+            actor, DepartmentScope.idOf(placement)));
 
         PlacementStatus currentStatus = placement.getStatus();
         transitionValidator.validateTransition(placement, newStatus);
 
         placement.setStatus(newStatus);
         InternshipPlacement saved = placementRepository.save(placement);
-        notificationHelper.logAndNotifyStatusChange(saved, currentStatus, newStatus);
+        notificationHelper.logAndNotifyStatusChange(saved, currentStatus, newStatus, actor.getId());
 
         return placementMapper.toResponse(saved);
     }

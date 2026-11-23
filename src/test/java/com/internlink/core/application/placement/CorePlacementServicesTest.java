@@ -133,7 +133,7 @@ class CorePlacementServicesTest {
     @Test
     void reportedCaseStartsOpenAndKeepsReporter() {
         InternshipCaseServiceImpl service =
-                new InternshipCaseServiceImpl(caseRepository, placementRepository, userRepository);
+                new InternshipCaseServiceImpl(caseRepository, placementRepository, userRepository, securityGuard);
         User reporter = user(UserRole.STUDENT);
         Company company =
                 Company.builder().companyName("Acme").taxCode("123").address(Map.of()).build();
