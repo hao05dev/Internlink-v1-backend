@@ -9,6 +9,8 @@ import com.internlink.core.infrastructure.persistence.jpa.JpaStudentRosterReposi
 import com.internlink.core.presentation.placement.dto.response.StudentFoundResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import com.internlink.core.presentation.placement.dto.request.AcceptanceFormDetails;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,7 +39,13 @@ public class AcceptanceFormMapper {
             a.getUpdatedAt(), a.getReceivedAt(), a.getReviewedAt(), a.getPublishedAt(), a.getDocumentsCollectedAt(),
             a.getSourceJob() != null ? a.getSourceJob().getId() : null,
             a.getSourceJob() != null ? a.getSourceJob().getTitle() : null,
-            a.getSourceJob() != null ? a.getSourceJob().getCompany().getCompanyName() : null);
+            a.getSourceJob() != null ? a.getSourceJob().getCompany().getCompanyName() : null,
+            new AcceptanceFormDetails(a.getHostProvince(), a.getHostPhone(), a.getContactPhone(),
+                a.getSessionsPerWeek(), a.getHasWorkspace(), a.getHasComputer(),
+                a.getWeeklyPlan() != null ? List.copyOf(a.getWeeklyPlan()) : List.of(), a.getOtherSupport()),
+            roster != null ? roster.getPhoneNumber() : null, roster != null ? roster.getClassCode() : null,
+            roster != null ? roster.getInternshipCourseCode() : null,
+            roster != null && roster.getProgram() != null ? roster.getProgram().getName() : null);
     }
 
     private UUID placementId(StudentFoundApplication a) {

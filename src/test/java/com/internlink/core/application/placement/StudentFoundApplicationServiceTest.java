@@ -7,6 +7,7 @@ import com.internlink.core.domain.placement.*;
 import com.internlink.core.domain.system.Document;
 import com.internlink.core.infrastructure.persistence.jpa.*;
 import com.internlink.core.infrastructure.security.CustomUserDetail;
+import com.internlink.core.presentation.placement.dto.request.AcceptanceFormDetails;
 import com.internlink.core.presentation.placement.dto.request.StudentFoundRequest;
 import com.internlink.core.shared.enums.*;
 import com.internlink.core.shared.exception.BadRequestException;
@@ -156,6 +157,31 @@ class StudentFoundApplicationServiceTest {
     }
 
     @Test
+    void fewerThanSixSessionsPerWeekIsRejected() {
+        actAs(student);
+        var tooFew = withDetails(new AcceptanceFormDetails("Cần Thơ", null, null, 5, true, true, null, null));
+        assertThatThrownBy(() -> studentService.create(tooFew))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessageContaining("6 buổi/tuần");
+    }
+
+    @Test
+    void googleFormFieldsAreStoredAndReturned() {
+        actAs(student);
+        var details = new AcceptanceFormDetails(" Cần Thơ ", "0292 123", "0901 000 111", 10, true, false,
+            List.of("Tìm hiểu dự án", " Viết API ", "", ""), " Phụ cấp ăn trưa ");
+
+        var created = studentService.create(withDetails(details));
+
+        assertThat(created.details().hostProvince()).isEqualTo("Cần Thơ");
+        assertThat(created.details().sessionsPerWeek()).isEqualTo(10);
+        assertThat(created.details().hasComputer()).isFalse();
+        assertThat(created.details().weeklyPlan()).containsExactly("Tìm hiểu dự án", "Viết API");
+        assertThat(created.details().otherSupport()).isEqualTo("Phụ cấp ăn trưa");
+        assertThat(created.courseCode()).isEqualTo("CT471");
+    }
+
+    @Test
     void selfFoundFormRecordsTheExternalJobItCameFrom() {
         var job = job(ApplicationMethod.EXTERNAL, JobStatus.CLOSED);
         actAs(student);
@@ -215,6 +241,11 @@ class StudentFoundApplicationServiceTest {
     private StudentFoundRequest request(LocalDate start, LocalDate end, UUID agreementId) {
         return new StudentFoundRequest(term.getId(), "Đơn vị X", "Cần Thơ", "Người nhận",
             "host@example.com", "Làm dự án", start, end, agreementId);
+    }
+
+    private StudentFoundRequest withDetails(AcceptanceFormDetails details) {
+        return new StudentFoundRequest(term.getId(), "Đơn vị X", "Cần Thơ", "Người nhận", "host@example.com",
+            "Làm dự án", LocalDate.of(2026, 9, 7), LocalDate.of(2026, 10, 30), null, null, details);
     }
 
     private StudentFoundRequest withSource(UUID sourceJobId) {

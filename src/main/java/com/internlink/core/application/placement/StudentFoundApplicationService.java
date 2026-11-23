@@ -8,6 +8,7 @@ import com.internlink.core.domain.placement.*;
 import com.internlink.core.domain.recruitment.JobPosition;
 import com.internlink.core.domain.system.Document;
 import com.internlink.core.infrastructure.persistence.jpa.*;
+import com.internlink.core.presentation.placement.dto.request.AcceptanceFormDetails;
 import com.internlink.core.presentation.placement.dto.request.StudentFoundRequest;
 import com.internlink.core.presentation.placement.dto.response.StudentFoundResponse;
 import com.internlink.core.shared.enums.*;
@@ -16,6 +17,7 @@ import com.internlink.core.shared.security.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -172,5 +174,30 @@ public class StudentFoundApplicationService {
         app.setWorkDescription(request.workDescription().trim());
         app.setStartDate(request.startDate());
         app.setEndDate(request.endDate());
+        applyDetails(app, request.details());
+    }
+
+    /** Field bổ sung theo Google Form; số buổi/tuần nếu có phải đạt mức tối thiểu của Khoa. */
+    private static void applyDetails(StudentFoundApplication app, AcceptanceFormDetails d) {
+        if (d == null) return;
+        if (d.sessionsPerWeek() != null && d.sessionsPerWeek() < AcceptanceFormDetails.MIN_SESSIONS_PER_WEEK)
+            throw new BadRequestException("Thời gian làm việc tại đơn vị phải từ "
+                + AcceptanceFormDetails.MIN_SESSIONS_PER_WEEK + " buổi/tuần trở lên");
+        app.setHostProvince(blankToNull(d.hostProvince()));
+        app.setHostPhone(blankToNull(d.hostPhone()));
+        app.setContactPhone(blankToNull(d.contactPhone()));
+        app.setSessionsPerWeek(d.sessionsPerWeek());
+        app.setHasWorkspace(d.hasWorkspace());
+        app.setHasComputer(d.hasComputer());
+        List<String> plan = d.weeklyPlan() == null ? List.of()
+            : d.weeklyPlan().stream().map(w -> w == null ? "" : w.trim()).toList();
+        int end = plan.size();
+        while (end > 0 && plan.get(end - 1).isEmpty()) end--; // bỏ dòng trống ở cuối, giữ thứ tự tuần
+        app.setWeeklyPlan(new ArrayList<>(plan.subList(0, end)));
+        app.setOtherSupport(blankToNull(d.otherSupport()));
+    }
+
+    private static String blankToNull(String v) {
+        return v == null || v.isBlank() ? null : v.trim();
     }
 }

@@ -7,8 +7,12 @@ import com.internlink.core.domain.system.Document;
 import com.internlink.core.shared.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Phiếu tiếp nhận thực tập của sinh viên (mỗi SV một phiếu mỗi kỳ).
@@ -62,6 +66,26 @@ public class StudentFoundApplication extends BaseEntity {
     private OffsetDateTime publishedAt;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "published_by_user_id")
     private User publishedBy;
+    @Column(name = "host_province", length = 100)
+    private String hostProvince;
+    @Column(name = "host_phone", length = 30)
+    private String hostPhone;
+    @Column(name = "contact_phone", length = 30)
+    private String contactPhone;
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    @Column(name = "sessions_per_week")
+    private Integer sessionsPerWeek;
+    @Column(name = "has_workspace")
+    private Boolean hasWorkspace;
+    @Column(name = "has_computer")
+    private Boolean hasComputer;
+    /** Công việc dự kiến theo tuần (Google Form "Công việc tuần 1-12"). */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Builder.Default
+    @Column(name = "weekly_plan", columnDefinition = "jsonb", nullable = false)
+    private List<String> weeklyPlan = new ArrayList<>();
+    @Column(name = "other_support", columnDefinition = "text")
+    private String otherSupport;
     @Column(name = "documents_collected_at")
     private OffsetDateTime documentsCollectedAt;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "documents_collected_by_user_id")
