@@ -71,6 +71,10 @@ public class InternshipTerm extends BaseEntity {
     @Column(name = "plan_news_post_id")
     private java.util.UUID planNewsPostId;
 
+    /** Bài tin công khai đăng Danh sách SV đủ điều kiện TTTT; mỗi đợt công bố thêm một tệp Excel vào bài này. */
+    @Column(name = "eligible_list_post_id")
+    private java.util.UUID eligibleListPostId;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
     @Column(name = "settings", columnDefinition = "jsonb", nullable = false)

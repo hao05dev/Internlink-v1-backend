@@ -44,10 +44,12 @@ class StudentFoundApplicationServiceTest {
     @Mock NotificationService notifications;
     @Mock InternshipPlacementService placementService;
     @Mock JpaTermMilestoneRepository milestones;
+    @Mock EligibleListNewsPublisher news;
 
     StudentFoundApplicationService studentService;
     AcceptanceFormOfficeService officeService;
     AcceptanceFormReviewService reviewService;
+    EligibleListPublishService publishService;
     Department department;
     InternshipTerm term;
     User student;
@@ -68,6 +70,7 @@ class StudentFoundApplicationServiceTest {
         reviewService = new AcceptanceFormReviewService(applications, placements, rosters, terms, users,
             eligibility, placementService, lookup, mapper, notifier,
             new com.internlink.core.application.organization.TermDepartmentScope(rosters, placements, applications));
+        publishService = new EligibleListPublishService(applications, terms, lookup, mapper, notifier, news);
 
         department = Department.builder().code("CICT").name("CNTT&TT").build();
         department.setId(UUID.randomUUID());
@@ -121,10 +124,23 @@ class StudentFoundApplicationServiceTest {
         assertThatThrownBy(() -> officeService.confirmDocumentsCollected(app.getId()))
             .isInstanceOf(BadRequestException.class);
 
+        when(applications.findByTermIdAndStatus(term.getId(), AcceptanceFormStatus.APPROVED)).thenReturn(List.of(app));
+        when(news.publish(eq(term), any(), anyList(), any(), anyString(), any())).thenReturn("danh-sach-hk1");
         actAs(facultyAdmin);
-        when(applications.findByTermIdAndStatusAndStudentDepartmentId(term.getId(), AcceptanceFormStatus.APPROVED, department.getId())).thenReturn(List.of(app));
-        assertThat(reviewService.publish(term.getId())).isEqualTo(1);
+        assertThatThrownBy(() -> publishService.publish(term.getId(), null)).isInstanceOf(ForbiddenException.class);
+
+        actAs(schoolOffice);
+        var preview = publishService.workbook(term.getId(), null);
+        assertThat(preview.fileName()).endsWith("(dot1).xlsx");
+        var result = publishService.publish(term.getId(), "Nhận giấy tờ từ 8g ngày 02/12");
+        assertThat(result.publishedCount()).isEqualTo(1);
+        assertThat(result.batch()).isEqualTo(1);
         assertThat(app.getStatus()).isEqualTo(AcceptanceFormStatus.PUBLISHED);
+        assertThat(app.getPublishedBy()).isEqualTo(schoolOffice);
+        verify(news).publish(eq(term), eq(schoolOffice), anyList(), any(byte[].class),
+            eq(preview.fileName()), eq("Nhận giấy tờ từ 8g ngày 02/12"));
+        verify(notifications).publishNotification(eq(student.getId()), eq("ACCEPTANCE_FORM_PUBLISHED"),
+            anyString(), contains("sảnh Văn phòng Trường CNTT-TT"), eq("/career-guide/danh-sach-hk1"), eq(true));
 
         actAs(schoolOffice);
         officeService.confirmDocumentsCollected(app.getId());

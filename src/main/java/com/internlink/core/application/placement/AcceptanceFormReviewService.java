@@ -19,8 +19,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Khoa: duyệt Phiếu tiếp nhận và đơn vị thực tập (chỉ phiếu VP Trường đã nhận bản giấy),
- * phân công GVHD, công bố danh sách SV thực tập của kỳ.
+ * Khoa: duyệt Phiếu tiếp nhận và đơn vị thực tập (chỉ phiếu VP Trường đã nhận bản giấy) và phân công GVHD.
+ * Công bố danh sách SV đủ điều kiện do Văn phòng Trường thực hiện ({@link EligibleListPublishService}).
  */
 @Service
 @RequiredArgsConstructor
@@ -69,28 +69,6 @@ public class AcceptanceFormReviewService {
         app.setReviewedBy(reviewer);
         app.setReviewedAt(OffsetDateTime.now());
         return mapper.toResponse(applications.save(app));
-    }
-
-    /** Công bố danh sách SV thực tập của kỳ: mọi phiếu đã duyệt chuyển PUBLISHED, SV đến VP Trường nhận giấy tờ. */
-    @Transactional
-    public int publish(UUID termId) {
-        var term = terms.findById(termId).orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
-        TermGuard.requireNotClosed(term);
-        var publisher = lookup.actor();
-        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(publisher));
-        // Mỗi Khoa công bố danh sách SV thuộc khoa mình trong kỳ cấp Trường.
-        var approved = termScope.applicationsWithStatus(termId, AcceptanceFormStatus.APPROVED, publisher);
-        if (approved.isEmpty()) throw new BadRequestException("Không có phiếu đã duyệt nào chờ công bố");
-        var now = OffsetDateTime.now();
-        for (var app : approved) {
-            app.setStatus(AcceptanceFormStatus.PUBLISHED);
-            app.setPublishedAt(now);
-            app.setPublishedBy(publisher);
-            notifier.published(app);
-        }
-        applications.saveAll(approved);
-        notifier.listPublished(term, publisher, approved.size());
-        return approved.size();
     }
 
     @Transactional(readOnly = true)

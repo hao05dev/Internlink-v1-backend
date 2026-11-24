@@ -72,6 +72,31 @@ public class MediaAssetService {
         return new Uploaded(asset.id(), asset.url(), asset.name(), asset.mime(), asset.size());
     }
 
+    /**
+     * Lưu tệp do hệ thống tự sinh (không qua form tải lên) làm tệp đính kèm bài viết của tác giả {@code authorId}.
+     * Tệp công khai khi bài viết PUBLISHED/PUBLIC của chính tác giả đó tham chiếu tới (MediaAccessPolicy).
+     */
+    @Transactional
+    public Uploaded storeGeneratedPostAttachment(byte[] bytes, String name, String mime, UUID ownerId, UUID authorId) {
+        var stored = r2.storeBytes(bytes, name, mime,
+                StorageFolders.media(MediaPurpose.POST_ATTACHMENT, authorId, ownerId, null));
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCompletion(int status) {
+                        if (status == STATUS_ROLLED_BACK)
+                            try {
+                                r2.delete(stored.getProviderFileId());
+                            } catch (RuntimeException ignored) {
+                            }
+                    }
+                });
+        var asset = new MediaAssetRepository.Asset(UUID.randomUUID(), ownerId, MediaPurpose.POST_ATTACHMENT,
+                authorId, null, stored.getProviderFileId(), name, mime, stored.getSizeBytes(), stored.getChecksum());
+        assets.insert(asset);
+        return new Uploaded(asset.id(), asset.url(), asset.name(), asset.mime(), asset.size());
+    }
+
     /** Xoá ảnh/tệp vừa tải lên nhưng chưa được bài viết/tin nào dùng (chỉ chủ sở hữu hoặc admin). */
     @Transactional
     public void delete(UUID id) {

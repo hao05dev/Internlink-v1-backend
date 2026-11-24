@@ -19,7 +19,7 @@ import java.util.UUID;
 
 /**
  * Văn phòng Trường CNTT-TT: đối chiếu bản giấy Phiếu tiếp nhận khi SV nộp tại sảnh,
- * trả phiếu sai cho SV sửa, và xác nhận SV đã nhận giấy tờ sau khi Khoa công bố danh sách.
+ * trả phiếu sai cho SV sửa, và xác nhận SV đã nhận giấy tờ sau khi VP Trường công bố danh sách.
  */
 @Service
 @RequiredArgsConstructor

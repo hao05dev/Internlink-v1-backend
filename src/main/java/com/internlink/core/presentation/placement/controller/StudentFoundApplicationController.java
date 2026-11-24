@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Phiếu tiếp nhận: SV điền/nộp phiếu; Khoa duyệt, phân công GVHD và công bố danh sách. */
+/** Phiếu tiếp nhận: SV điền/nộp phiếu; Khoa duyệt, phân công GVHD và nhắc SV chưa nộp. */
 @RestController @RequestMapping("/api/v1/student-found") @RequiredArgsConstructor
 public class StudentFoundApplicationController {
     private final StudentFoundApplicationService service;
@@ -46,12 +46,6 @@ public class StudentFoundApplicationController {
     public ApiResponse<List<StudentFoundResponse>> byTerm(@PathVariable UUID termId,
                                                          @RequestParam(required = false) UUID departmentId) {
         return ApiResponse.success(reviewService.byTerm(termId, departmentId));
-    }
-    @PostMapping("/term/{termId}/publish") @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN')")
-    public ApiResponse<Map<String, Object>> publish(@PathVariable UUID termId) {
-        int count = reviewService.publish(termId);
-        return ApiResponse.success(Map.of("publishedCount", count,
-            "message", "Đã công bố danh sách " + count + " sinh viên thực tập"));
     }
     @PostMapping("/term/{termId}/remind") @PreAuthorize("hasAnyRole('FACULTY_ADMIN', 'ADMIN')")
     public ApiResponse<Map<String, Object>> remindTerm(@PathVariable UUID termId) {

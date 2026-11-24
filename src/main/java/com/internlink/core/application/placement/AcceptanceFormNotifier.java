@@ -9,6 +9,7 @@ import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
 import com.internlink.core.shared.enums.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import java.util.Map;
 import java.util.UUID;
 
 /** Thông báo theo từng bước của Phiếu tiếp nhận (SV, VP Trường, Khoa, GVHD). */
@@ -57,7 +58,7 @@ public class AcceptanceFormNotifier {
 
     public void approved(StudentFoundApplication app, User lecturer) {
         toStudent(app, "ACCEPTANCE_FORM_APPROVED", "Khoa đã duyệt Phiếu tiếp nhận",
-            "Đơn vị " + app.getHostName() + " đã được duyệt. Chờ Khoa công bố danh sách SV thực tập.");
+            "Đơn vị " + app.getHostName() + " đã được duyệt. Chờ Văn phòng Trường công bố danh sách SV đủ điều kiện thực tập.");
         if (lecturer != null) {
             notifications.sendNotification(lecturer.getId(), "LECTURER_ASSIGNED",
                 "Phân công hướng dẫn thực tập",
@@ -67,21 +68,29 @@ public class AcceptanceFormNotifier {
         }
     }
 
-    public void published(StudentFoundApplication app) {
-        toStudent(app, "ACCEPTANCE_FORM_PUBLISHED", "Đã công bố danh sách SV thực tập",
-            "Bạn có tên trong danh sách thực tập kỳ " + app.getTerm().getTermName()
-                + ". Vui lòng đến Văn phòng Trường CNTT-TT nhận giấy tờ.");
+    /** Gửi cả thông báo trong app và email: SV có tên trong danh sách, đến sảnh VP Trường nhận giấy tờ. */
+    public void published(StudentFoundApplication app, int batch, String newsLink, String note) {
+        String extra = note == null || note.isBlank() ? "" : " Thông báo của Văn phòng Trường: " + note.trim();
+        notifications.publishNotification(app.getStudent().getId(), "ACCEPTANCE_FORM_PUBLISHED",
+            "Đã có danh sách SV đủ điều kiện thực tập thực tế",
+            "Văn phòng Trường CNTT-TT đã công bố danh sách sinh viên đủ điều kiện thực tập thực tế kỳ "
+                + app.getTerm().getTermName() + " (đợt " + batch + "). Bạn có tên trong danh sách với đơn vị "
+                + app.getHostName() + ". Vui lòng đến sảnh Văn phòng Trường CNTT-TT nhận các giấy tờ liên quan "
+                + "để đi thực tập thực tế. Danh sách đầy đủ (tệp Excel) xem trên trang Tin tức InternLink." + extra,
+            newsLink, true);
     }
 
-    public void listPublished(InternshipTerm term, User publisher, int count) {
-        String by = publisher.getDepartment() != null ? publisher.getDepartment().getName() : "Khoa";
-        for (User office : users.findByRole(UserRole.SCHOOL_OFFICE)) {
-            notifications.sendNotification(office.getId(), "ACCEPTANCE_LIST_PUBLISHED",
-                "Khoa đã công bố danh sách thực tập",
-                by + " công bố " + count + " SV kỳ " + term.getTermName()
-                    + ". Chuẩn bị giấy tờ để phát cho sinh viên.",
-                OFFICE_LINK);
-        }
+    /** Báo Quản lý Khoa của các khoa có SV trong đợt vừa công bố. */
+    public void listPublished(InternshipTerm term, int batch, Map<UUID, Long> countByDepartment, String newsLink) {
+        countByDepartment.forEach((departmentId, count) -> {
+            for (User admin : users.findByDepartmentIdAndRole(departmentId, UserRole.FACULTY_ADMIN)) {
+                notifications.sendNotification(admin.getId(), "ACCEPTANCE_LIST_PUBLISHED",
+                    "Văn phòng Trường đã công bố danh sách thực tập",
+                    "Đợt " + batch + " kỳ " + term.getTermName() + " có " + count
+                        + " sinh viên của khoa. Danh sách đã đăng trên trang Tin tức.",
+                    newsLink);
+            }
+        });
     }
 
     public void documentsCollected(StudentFoundApplication app) {

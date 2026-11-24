@@ -5,7 +5,7 @@ import java.util.Set;
 /**
  * Vòng đời Phiếu tiếp nhận:
  * DRAFT -> SUBMITTED (SV nộp Form + scan) -> RECEIVED (VP Trường nhận bản giấy)
- * -> APPROVED (Khoa duyệt) -> PUBLISHED (Khoa công bố danh sách).
+ * -> APPROVED (Khoa duyệt) -> PUBLISHED (VP Trường công bố danh sách SV đủ điều kiện).
  * REVISION_REQUIRED / REJECTED: VP Trường trả lại hoặc Khoa yêu cầu sửa / từ chối.
  */
 public final class AcceptanceFormStatus {
