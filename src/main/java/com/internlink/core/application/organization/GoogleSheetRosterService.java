@@ -7,7 +7,7 @@ import com.internlink.core.infrastructure.persistence.jpa.JpaAcademicProgramRepo
 import com.internlink.core.infrastructure.persistence.jpa.JpaInternshipTermRepository;
 import com.internlink.core.infrastructure.persistence.jpa.JpaUserRepository;
 import com.internlink.core.presentation.organization.dto.request.StudentRosterImportItem;
-import com.internlink.core.presentation.organization.dto.response.StudentRosterResponse;
+import com.internlink.core.presentation.organization.dto.response.RosterImportResponse;
 import com.internlink.core.shared.exception.BadRequestException;
 import com.internlink.core.shared.exception.ResourceNotFoundException;
 import com.internlink.core.shared.security.ResourceAuthorization;
@@ -40,11 +40,11 @@ public class GoogleSheetRosterService {
     private final SecurityGuard securityGuard;
 
     @Transactional
-    public List<StudentRosterResponse> importSheet(UUID termId, String spreadsheetId, String range) {
+    public RosterImportResponse importSheet(UUID termId, String spreadsheetId, String range) {
         var term = terms.findById(termId).orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
         var actor = users.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(actor) || ResourceAuthorization.worksOnTerm(actor));
         if (spreadsheetId == null || !spreadsheetId.matches("[A-Za-z0-9_-]{20,}"))
             throw new BadRequestException("Spreadsheet ID không hợp lệ");
         if (range == null || range.isBlank() || range.length() > 100)

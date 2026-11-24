@@ -1,5 +1,6 @@
 package com.internlink.core.domain.organization;
 
+import com.internlink.core.shared.enums.RosterSource;
 import com.internlink.core.shared.domain.BaseEntity;
 import com.internlink.core.domain.auth.User;
 import jakarta.persistence.*;
@@ -86,4 +87,13 @@ public class StudentRoster extends BaseEntity {
 
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 20)
+    private RosterSource source = RosterSource.SCHOOL_OFFICE;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "added_by_id")
+    private User addedBy;
 }

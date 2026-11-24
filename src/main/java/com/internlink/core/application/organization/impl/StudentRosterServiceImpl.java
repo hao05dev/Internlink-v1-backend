@@ -1,8 +1,10 @@
 package com.internlink.core.application.organization.impl;
 
 import com.internlink.core.application.organization.TermDepartmentScope;
+import com.internlink.core.application.organization.RosterImportNotifier;
+import com.internlink.core.application.organization.RosterImportRules;
+import com.internlink.core.presentation.organization.dto.response.RosterImportResponse;
 import com.internlink.core.shared.security.DepartmentScope;
-import com.internlink.core.domain.placement.InternshipDurationRule;
 import com.internlink.core.application.organization.StudentRosterService;
 import com.internlink.core.application.system.AuditLogService;
 import com.internlink.core.domain.organization.AcademicProgram;
@@ -25,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StudentRosterServiceImpl implements StudentRosterService {
 
-    private static final BigDecimal MAX_GPA = new BigDecimal("4.0");
 
     private final JpaStudentRosterRepository rosterRepository;
     private final JpaInternshipTermRepository termRepository;
@@ -47,6 +47,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
     private final StudentRosterAccountProvisioner accountProvisioner;
     private final RosterAttemptHistoryResolver attemptHistory;
     private final TermDepartmentScope termScope;
+    private final RosterImportNotifier importNotifier;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,7 +55,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         InternshipTerm term = termRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor)
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(actor) || ResourceAuthorization.worksOnTerm(actor)
                 || (actor.getRole() == UserRole.LECTURER && actor.getDepartment() != null));
         List<StudentRoster> rosters = termScope.rosters(termId, actor);
         return withAttemptHistory(term, rosters);
@@ -62,72 +63,61 @@ public class StudentRosterServiceImpl implements StudentRosterService {
 
     @Override
     @Transactional
-    public List<StudentRosterResponse> importRosterList(UUID termId, List<StudentRosterImportItem> items) {
+    public RosterImportResponse importRosterList(UUID termId, List<StudentRosterImportItem> items) {
         InternshipTerm term = termRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
         var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(actor) || ResourceAuthorization.worksOnTerm(actor));
+        // null = VP Trường / Admin nhập cho cả Trường; còn lại là khoa của Quản lý Khoa.
+        UUID actorDepartment = termScope.restrictTo(actor);
 
         if (items.isEmpty()) {
             throw new BadRequestException("Danh sách import trống");
         }
 
         List<StudentRoster> rostersToSave = new ArrayList<>();
+        List<RosterImportResponse.SkippedRow> skipped = new ArrayList<>();
+        int created = 0;
 
         for (StudentRosterImportItem item : items) {
-            validateImportItem(item);
+            RosterRowWriter.validate(item);
             AcademicProgram program = programRepository.findById(item.getProgramId())
                     .orElseThrow(() -> new ResourceNotFoundException("AcademicProgram", "id", item.getProgramId()));
 
-            // Khoa chỉ import sinh viên thuộc ngành của khoa mình.
-            if (!ResourceAuthorization.managesDepartment(actor, program.getDepartment().getId())) {
+            // Khoa chỉ bổ sung SV thuộc ngành của khoa mình; VP Trường nhập mọi ngành.
+            if (actorDepartment != null && !actorDepartment.equals(program.getDepartment().getId())) {
                 throw new BadRequestException("Ngành " + program.getCode() + " không thuộc khoa của bạn");
             }
 
-            String cleanStudentCode = sanitizeString(item.getStudentCode()).toUpperCase();
-            String cleanFullName = sanitizeString(item.getFullName());
-            String cleanEmail = sanitizeString(item.getOfficialEmail()).toLowerCase();
-            String cleanYear = sanitizeString(item.getAcademicYear());
-            String cleanClass = sanitizeString(item.getClassCode());
-            String cleanCourse = sanitizeString(item.getInternshipCourseCode()).toUpperCase();
-
-            StudentRoster roster = rosterRepository
-                    .findByTermIdAndStudentCode(termId, cleanStudentCode)
-                    .orElse(StudentRoster.builder()
-                            .term(term)
-                            .studentCode(cleanStudentCode)
-                            .build());
-
-            roster.setProgram(program);
-            roster.setOfficialEmail(cleanEmail);
-            roster.setFullName(cleanFullName);
-            roster.setAcademicYear(cleanYear);
-            roster.setClassCode(cleanClass);
-            roster.setInternshipCourseCode(cleanCourse);
-            if (item.getInternshipCredits() != null) {
-                InternshipDurationRule.requireValidCredits(item.getInternshipCredits());
-                roster.setInternshipCredits(item.getInternshipCredits());
+            String studentCode = RosterRowWriter.studentCode(item);
+            StudentRoster existing = rosterRepository.findByTermIdAndStudentCode(termId, studentCode).orElse(null);
+            switch (RosterImportRules.decide(actorDepartment, existing)) {
+                case SKIP_OTHER_DEPARTMENT -> skipped.add(new RosterImportResponse.SkippedRow(studentCode,
+                        "Sinh viên đang thuộc khoa khác trong danh sách của Văn phòng Trường"));
+                case LECTURER_ONLY -> {
+                    if (RosterRowWriter.writeLecturer(existing, item, userRepository::findByEmail)) {
+                        rostersToSave.add(existing);
+                    }
+                    skipped.add(new RosterImportResponse.SkippedRow(studentCode,
+                            "Đã có trong danh sách của Văn phòng Trường: giữ nguyên hồ sơ, chỉ cập nhật GVHD (nếu có)"));
+                }
+                case CREATE, UPDATE -> {
+                    StudentRoster roster = existing != null ? existing
+                            : StudentRoster.builder().term(term).studentCode(studentCode).build();
+                    if (existing == null) {
+                        created++;
+                    }
+                    if (existing == null || actorDepartment == null) {
+                        // VP Trường nhập lại thì dòng thành dòng chuẩn, kể cả khi trước đó Khoa bổ sung.
+                        roster.setSource(RosterImportRules.sourceFor(actorDepartment));
+                        roster.setAddedBy(actor);
+                    }
+                    RosterRowWriter.writeProfile(roster, item, program);
+                    RosterRowWriter.writeLecturer(roster, item, userRepository::findByEmail);
+                    rostersToSave.add(roster);
+                }
             }
-            roster.setGpa(item.getGpa());
-            if (item.getPhoneNumber() != null && !item.getPhoneNumber().isBlank()) {
-                roster.setPhoneNumber(sanitizeString(item.getPhoneNumber()));
-            }
-
-            // Ghi nhận thông tin Giảng viên hướng dẫn học phần
-            if (item.getLecturerCode() != null && !item.getLecturerCode().isBlank()) {
-                roster.setLecturerCode(sanitizeString(item.getLecturerCode()));
-            }
-            if (item.getLecturerName() != null && !item.getLecturerName().isBlank()) {
-                roster.setLecturerName(sanitizeString(item.getLecturerName()));
-            }
-            if (item.getLecturerEmail() != null && !item.getLecturerEmail().isBlank()) {
-                String lecEmail = sanitizeString(item.getLecturerEmail()).toLowerCase();
-                roster.setLecturerEmail(lecEmail);
-                userRepository.findByEmail(lecEmail).ifPresent(roster::setAssignedLecturer);
-            }
-
-            rostersToSave.add(roster);
         }
 
         List<StudentRoster> saved = rosterRepository.saveAll(rostersToSave);
@@ -135,8 +125,14 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         long repeatCount = responses.stream().filter(r -> r.getAttemptNumber() > 1).count();
         auditLogService.logAction(
                 securityGuard.currentUser().getId(), "IMPORT_STUDENT_ROSTER", "InternshipTerm", termId,
-                "SUCCESS", Map.of("count", saved.size(), "repeatCount", repeatCount), null);
-        return responses;
+                "SUCCESS", Map.of("count", saved.size(), "created", created, "skipped", skipped.size(),
+                        "repeatCount", repeatCount, "source", RosterImportRules.sourceFor(actorDepartment).name()), null);
+        if (actorDepartment == null) {
+            importNotifier.schoolOfficeImported(term, saved);
+        } else {
+            importNotifier.facultyAdded(term, actor, created);
+        }
+        return new RosterImportResponse(created, saved.size() - created, responses, skipped);
     }
 
     @Override
@@ -146,8 +142,8 @@ public class StudentRosterServiceImpl implements StudentRosterService {
                 .orElseThrow(() -> new ResourceNotFoundException("StudentRoster", "id", rosterId));
         TermGuard.requireNotClosed(roster.getTerm());
         var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(
-                ResourceAuthorization.managesDepartment(actor, DepartmentScope.idOf(roster)));
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(actor)
+                || ResourceAuthorization.managesDepartment(actor, DepartmentScope.idOf(roster)));
 
         return accountProvisioner.provisionSingleAccount(roster, mapper);
     }
@@ -159,7 +155,7 @@ public class StudentRosterServiceImpl implements StudentRosterService {
                 .orElseThrow(() -> new ResourceNotFoundException("InternshipTerm", "id", termId));
         TermGuard.requireNotClosed(term);
         var actor = userRepository.findById(securityGuard.currentUser().getId()).orElseThrow();
-        ResourceAuthorization.require(ResourceAuthorization.worksOnTerm(actor));
+        ResourceAuthorization.require(ResourceAuthorization.actsForSchool(actor) || ResourceAuthorization.worksOnTerm(actor));
 
         return accountProvisioner.batchProvisionEligible(
                 term, actor.getId(), termScope.rosters(termId, actor), rosterIds);
@@ -181,33 +177,5 @@ public class StudentRosterServiceImpl implements StudentRosterService {
         List<StudentRosterResponse> responses = rosters.stream().map(mapper::mapToResponse).toList();
         attemptHistory.enrich(term, rosters, responses);
         return responses;
-    }
-
-    private String sanitizeString(String input) {
-        if (input == null) return null;
-        String trimmed = input.trim();
-        while (trimmed.startsWith("=") || trimmed.startsWith("+") || trimmed.startsWith("-")
-                || trimmed.startsWith("@") || trimmed.startsWith("\t") || trimmed.startsWith("\r")) {
-            trimmed = trimmed.substring(1).trim();
-        }
-        return trimmed;
-    }
-
-    private void validateImportItem(StudentRosterImportItem item) {
-        if (item.getProgramId() == null
-                || item.getStudentCode() == null || item.getStudentCode().isBlank()
-                || item.getFullName() == null || item.getFullName().isBlank()
-                || item.getOfficialEmail() == null || !item.getOfficialEmail().matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
-                || item.getAcademicYear() == null || item.getAcademicYear().isBlank()) {
-            throw new BadRequestException("Dòng roster thiếu MSSV, họ tên, email, khóa hoặc ngành học");
-        }
-        if (item.getInternshipCourseCode() == null || item.getInternshipCourseCode().isBlank()) {
-            throw new BadRequestException("Cần mã học phần thực tập theo chương trình đào tạo");
-        }
-        if (item.getGpa() == null
-                || item.getGpa().compareTo(BigDecimal.ZERO) < 0
-                || item.getGpa().compareTo(MAX_GPA) > 0) {
-            throw new BadRequestException("Điểm GPA của sinh viên " + item.getStudentCode() + " phải nằm trong khoảng 0.0 - 4.0");
-        }
     }
 }

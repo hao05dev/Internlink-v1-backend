@@ -252,7 +252,8 @@ class CoreOrganizationServicesTest {
                         new StudentRosterMapper(),
                         mock(StudentRosterAccountProvisioner.class),
                         mock(RosterAttemptHistoryResolver.class),
-                        new com.internlink.core.application.organization.TermDepartmentScope(rosterRepository, placementRepository, org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class)));
+                        new com.internlink.core.application.organization.TermDepartmentScope(rosterRepository, placementRepository, org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class)),
+                        mock(com.internlink.core.application.organization.RosterImportNotifier.class));
         Department termDepartment = department();
         User actor = user(UserRole.FACULTY_ADMIN);
         actor.setDepartment(termDepartment);
@@ -291,7 +292,8 @@ class CoreOrganizationServicesTest {
                         new StudentRosterMapper(),
                         mock(StudentRosterAccountProvisioner.class),
                         mock(RosterAttemptHistoryResolver.class),
-                        new com.internlink.core.application.organization.TermDepartmentScope(rosterRepository, placementRepository, org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class)));
+                        new com.internlink.core.application.organization.TermDepartmentScope(rosterRepository, placementRepository, org.mockito.Mockito.mock(com.internlink.core.infrastructure.persistence.jpa.JpaStudentFoundApplicationRepository.class)),
+                        mock(com.internlink.core.application.organization.RosterImportNotifier.class));
         Department department = department();
         User actor = user(UserRole.FACULTY_ADMIN);
         actor.setDepartment(department);

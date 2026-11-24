@@ -55,7 +55,7 @@ class GoogleSheetRosterServiceTest {
         when(programs.findByCode("SE")).thenReturn(Optional.of(program));
         when(google.json(eq("GET"), any(URI.class), eq(GoogleWorkspaceClient.SHEETS_READ), isNull(), isNull(), isNull()))
             .thenReturn(new ObjectMapper().readTree("{\"values\":[[\"studentCode\",\"fullName\",\"officialEmail\",\"programCode\",\"academicYear\",\"internshipCourseCode\",\"gpa\"],[\"b2110940\",\"Lê Hoàng Nam\",\"b2110940@student.ctu.edu.vn\",\"se\",\"K47\",\"CT444\",\"3,45\"]]}"));
-        when(rosterService.importRosterList(eq(termId), anyList())).thenReturn(List.of());
+        when(rosterService.importRosterList(eq(termId), anyList())).thenReturn(new com.internlink.core.presentation.organization.dto.response.RosterImportResponse(0, 0, List.of(), List.of()));
 
         new GoogleSheetRosterService(google, programs, rosterService, terms, users, securityGuard)
             .importSheet(termId, "12345678901234567890", "Sheet1!A:F");

@@ -9,6 +9,7 @@ import com.internlink.core.presentation.organization.dto.request.RosterSelection
 import com.internlink.core.presentation.organization.dto.request.StudentRosterImportItem;
 import com.internlink.core.presentation.organization.dto.response.BatchProvisionResponse;
 import com.internlink.core.presentation.organization.dto.response.BulkRosterLecturerResponse;
+import com.internlink.core.presentation.organization.dto.response.RosterImportResponse;
 import com.internlink.core.presentation.organization.dto.response.StudentRosterResponse;
 import com.internlink.core.shared.api.ApiResponse;
 import com.internlink.core.shared.validation.ImportRowLimit;
@@ -35,17 +36,17 @@ public class StudentRosterController {
     public record GoogleSheetImportRequest(String spreadsheetId, String range) {}
 
     @PostMapping("/import-sheet/{termId}")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
-    public ResponseEntity<ApiResponse<List<StudentRosterResponse>>> importGoogleSheet(
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN', 'FACULTY_ADMIN')")
+    public ResponseEntity<ApiResponse<RosterImportResponse>> importGoogleSheet(
         @PathVariable UUID termId, @RequestBody GoogleSheetImportRequest request
     ) {
-        var responses = googleSheetRosterService.importSheet(termId, request.spreadsheetId(), request.range());
+        var result = googleSheetRosterService.importSheet(termId, request.spreadsheetId(), request.range());
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success("Đã import " + responses.size() + " sinh viên từ Google Sheets", responses));
+            .body(ApiResponse.success("Đã import " + result.rosters().size() + " sinh viên từ Google Sheets", result));
     }
 
     @GetMapping("/by-term/{termId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY_ADMIN', 'LECTURER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SCHOOL_OFFICE', 'FACULTY_ADMIN', 'LECTURER')")
     public ResponseEntity<ApiResponse<List<StudentRosterResponse>>> getRostersByTerm(
             @PathVariable UUID termId
     ) {
@@ -54,19 +55,19 @@ public class StudentRosterController {
     }
 
     @PostMapping("/import/{termId}")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
-    public ResponseEntity<ApiResponse<List<StudentRosterResponse>>> importRosterList(
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN', 'FACULTY_ADMIN')")
+    public ResponseEntity<ApiResponse<RosterImportResponse>> importRosterList(
             @PathVariable UUID termId,
             @Valid @RequestBody List<StudentRosterImportItem> items
     ) {
         ImportRowLimit.check(items);
-        List<StudentRosterResponse> responses = rosterService.importRosterList(termId, items);
+        RosterImportResponse result = rosterService.importRosterList(termId, items);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Import danh sách sinh viên thành công (" + responses.size() + " sinh viên)", responses));
+                .body(ApiResponse.success("Import danh sách sinh viên thành công (" + result.rosters().size() + " sinh viên)", result));
     }
 
     @PostMapping("/{rosterId}/provision-account")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN', 'FACULTY_ADMIN')")
     public ResponseEntity<ApiResponse<StudentRosterResponse>> provisionAccount(
             @PathVariable UUID rosterId
     ) {
@@ -76,7 +77,7 @@ public class StudentRosterController {
     }
 
     @PostMapping("/by-term/{termId}/batch-provision")
-    @PreAuthorize("hasRole('FACULTY_ADMIN')")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN', 'FACULTY_ADMIN')")
     public ResponseEntity<ApiResponse<BatchProvisionResponse>> batchProvisionEligibleAccounts(
             @PathVariable UUID termId,
             @RequestBody(required = false) RosterSelectionRequest request

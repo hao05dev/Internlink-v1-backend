@@ -19,6 +19,11 @@ public class StudentRosterResponse {
     private String termName;
     private UUID programId;
     private String programName;
+    private UUID departmentId;
+    private String departmentName;
+    /** SCHOOL_OFFICE: VP Trường nhập; FACULTY: Khoa bổ sung. */
+    private String source;
+    private String addedByName;
     private String studentCode;
     private String officialEmail;
     private String fullName;
