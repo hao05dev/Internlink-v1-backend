@@ -96,12 +96,14 @@ class DailyJournalServiceTest {
     @Test
     void rejectsFutureDateAndStaleVersion() {
         student();
-        p.setEndDate(LocalDate.now().plusDays(3));
+        // "Hôm nay" theo giờ VN như service; CI chạy UTC nên không dùng LocalDate.now() mặc định.
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        p.setEndDate(today.plusDays(3));
         assertThatThrownBy(
                         () ->
                                 service.save(
                                         p.getId(),
-                                        LocalDate.now().plusDays(1),
+                                        today.plusDays(1),
                                         input("PRESENT", true)))
                 .isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> DailyJournalService.checkVersion(2, 1))
