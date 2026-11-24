@@ -27,6 +27,8 @@ import java.util.*;
 public class TermPlanNewsPublisher {
     private static final ZoneId VN = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    /** Ảnh bìa có sẵn ở frontend (public/images); Văn phòng vẫn đổi được ảnh khác khi sửa bài. */
+    static final String DEFAULT_COVER = "/images/news-term-plan-cover.jpg";
 
     private final JpaCareerGuidePostRepository posts;
     private final JpaUserRepository users;
@@ -43,6 +45,7 @@ public class TermPlanNewsPublisher {
         post.setTitle(title(term));
         post.setCategory(PostCategory.REGULATIONS_GUIDELINES);
         post.setSummary(summary(term, milestones));
+        if (post.getCoverImageUrl() == null || post.getCoverImageUrl().isBlank()) post.setCoverImageUrl(DEFAULT_COVER);
         post.setContent(content(term, milestones, document.isPresent()));
         post.setAttachmentUrls(document.map(TermPlanNewsPublisher::attachment).map(List::of).orElse(List.of()));
         post.setTags(List.of("Kế hoạch TTTT", term.getAcademicYear() == null ? "Thực tập" : term.getAcademicYear()));

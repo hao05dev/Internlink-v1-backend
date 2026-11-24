@@ -46,9 +46,17 @@ public final class MediaGallery {
     /** Ảnh bìa nội bộ phải nằm trong gallery (khi gallery có ảnh); URL ngoài cũ được giữ. */
     public static void requireCoverInGallery(List<Map<String, Object>> gallery, String cover) {
         if (gallery == null || gallery.isEmpty() || cover == null || cover.isBlank()) return;
-        if (external(cover)) return;
+        if (external(cover) || bundled(cover)) return;
         boolean found = gallery.stream().anyMatch(item -> cover.equals(text(item.get("url"))));
         if (!found) throw new BadRequestException("Ảnh bìa phải được chọn từ thư viện ảnh");
+    }
+
+    /** Ảnh có sẵn trong giao diện (vd. bìa mặc định của bài Kế hoạch TTTT), không phải tệp tải lên. */
+    private static final java.util.regex.Pattern BUNDLED =
+            java.util.regex.Pattern.compile("/images/[a-z0-9-]+\\.(?:jpg|png|webp)");
+
+    public static boolean bundled(String url) {
+        return url != null && BUNDLED.matcher(url).matches();
     }
 
     static boolean external(String url) {

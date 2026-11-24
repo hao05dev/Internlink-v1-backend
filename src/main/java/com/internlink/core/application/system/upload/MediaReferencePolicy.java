@@ -123,6 +123,7 @@ public class MediaReferencePolicy {
         if (url == null || url.isBlank()) return;
         // Keep old remote references readable; newly uploaded files always use a managed URL.
         if (url.startsWith("https://") || url.startsWith("http://")) return;
+        if (purpose == MediaPurpose.POST_COVER && MediaGallery.bundled(url)) return;
         requireManaged(url, purpose, context);
     }
 

@@ -35,6 +35,17 @@ class MediaGalleryPolicyTest {
     }
 
     @Test
+    void acceptsBundledCoverButNotArbitraryPaths() {
+        assertThatCode(() -> policy.post(author, "/images/news-term-plan-cover.jpg", List.of(), List.of(), ""))
+                .doesNotThrowAnyException();
+        var img = asset(MediaPurpose.POST_IMAGE, author, 10);
+        assertThatCode(() -> policy.post(author, "/images/news-term-plan-cover.jpg", List.of(item(img)), List.of(), ""))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> policy.post(author, "/images/../api/v1/x.jpg", List.of(), List.of(), ""))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
     void rejectsCoverOutsideGalleryAndForeignImages() {
         var mine = asset(MediaPurpose.POST_IMAGE, author, 10);
         var other = asset(MediaPurpose.POST_IMAGE, author, 10);

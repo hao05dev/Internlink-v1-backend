@@ -75,13 +75,15 @@ class TermPlanNewsPublisherTest {
         verify(posts).save(argThat(p -> p.getAuthor() == uploader && p.getIsPinned()
             && "PUBLIC".equals(p.getVisibility()) && "PUBLISHED".equals(p.getStatus())
             && p.getCategory() == PostCategory.REGULATIONS_GUIDELINES
+            && TermPlanNewsPublisher.DEFAULT_COVER.equals(p.getCoverImageUrl())
             && p.getAttachmentUrls().size() == 1 && "2 KB".equals(p.getAttachmentUrls().get(0).get("fileSize"))));
     }
 
     @Test
     void republishUpdatesTheSamePostAndKeepsItsSlug() {
         var term = term();
-        var existing = CareerGuidePost.builder().slug("ke-hoach-cu").viewCount(5).build();
+        var existing = CareerGuidePost.builder().slug("ke-hoach-cu").viewCount(5)
+            .coverImageUrl("/api/v1/public/media/anh-van-phong-tu-chon").build();
         existing.setId(UUID.randomUUID());
         term.setPlanNewsPostId(existing.getId());
         when(posts.findById(existing.getId())).thenReturn(Optional.of(existing));
@@ -92,6 +94,7 @@ class TermPlanNewsPublisherTest {
         assertThat(slug).isEqualTo("ke-hoach-cu");
         assertThat(existing.getViewCount()).isEqualTo(5);
         assertThat(existing.getAttachmentUrls()).isEmpty();
+        assertThat(existing.getCoverImageUrl()).isEqualTo("/api/v1/public/media/anh-van-phong-tu-chon");
         verify(posts, never()).existsBySlug(any());
     }
 }
