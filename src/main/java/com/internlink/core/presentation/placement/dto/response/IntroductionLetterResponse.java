@@ -25,7 +25,9 @@ public record IntroductionLetterResponse(
         String classCode,
         String officialEmail,
         boolean letterReceived,
-        OffsetDateTime letterReceivedAt
+        OffsetDateTime letterReceivedAt,
+        /** Khoa quản lý ngành của SV (VP Trường lọc theo khoa). */
+        String departmentName
 ) {
     public IntroductionLetterResponse(
             UUID id,
@@ -66,7 +68,8 @@ public record IntroductionLetterResponse(
                 null,
                 null,
                 status == IntroductionLetterStatus.ISSUED,
-                receivedAt
+                receivedAt,
+                null
         );
     }
 }

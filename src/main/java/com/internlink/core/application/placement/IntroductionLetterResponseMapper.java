@@ -37,7 +37,9 @@ class IntroductionLetterResponseMapper {
                 status, code, note, processor,
                 request != null ? request.getProcessedAt() : null,
                 roster.getLetterReceivedAt(), createdAt, roster.getId(), roster.getClassCode(),
-                roster.getOfficialEmail(), roster.isLetterReceived(), roster.getLetterReceivedAt());
+                roster.getOfficialEmail(), roster.isLetterReceived(), roster.getLetterReceivedAt(),
+                roster.getProgram() != null && roster.getProgram().getDepartment() != null
+                        ? roster.getProgram().getDepartment().getName() : null);
     }
 
     IntroductionLetterResponse fromRequest(IntroductionLetterRequest request, String studentCode) {
@@ -49,6 +51,6 @@ class IntroductionLetterResponseMapper {
                 request.getProcessedBy() != null ? request.getProcessedBy().getFullName() : null,
                 request.getProcessedAt(), request.getReceivedAt(), request.getCreatedAt(),
                 null, null, null, request.getStatus() == IntroductionLetterStatus.ISSUED,
-                request.getReceivedAt());
+                request.getReceivedAt(), null);
     }
 }
