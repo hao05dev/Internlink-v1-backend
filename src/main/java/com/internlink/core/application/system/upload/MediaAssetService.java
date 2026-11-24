@@ -30,6 +30,8 @@ public class MediaAssetService {
 
     public record Download(Resource resource, String mime, String name) {}
 
+    public record Metadata(String key, String mime, String name, long size, String checksum) {}
+
     @Transactional
     public Uploaded upload(MultipartFile file, MediaPurpose purpose, UUID context, String scope)
             throws IOException {
@@ -95,10 +97,24 @@ public class MediaAssetService {
 
     @Transactional(readOnly = true)
     public Download download(UUID id, boolean publicEndpoint) {
+        var file = metadata(id, publicEndpoint);
+        return new Download(r2.loadAsResource(file.key()), file.mime(), file.name());
+    }
+
+    @Transactional(readOnly = true)
+    public Metadata metadata(UUID id, boolean publicEndpoint) {
         var asset = assets.get(id);
         if ((publicEndpoint && asset.purpose().privateImage())
                 || !access.canRead(access.optionalActor(), asset))
             throw new ResourceNotFoundException("MediaAsset", "id", id);
-        return new Download(r2.loadAsResource(asset.key()), asset.mime(), asset.name());
+        return new Metadata(asset.key(), asset.mime(), asset.name(), asset.size(), asset.checksum());
+    }
+
+    public Resource content(Metadata file) {
+        return r2.loadAsResource(file.key());
+    }
+
+    public Resource content(Metadata file, long start, long end) {
+        return r2.loadRangeAsResource(file.key(), start, end);
     }
 }

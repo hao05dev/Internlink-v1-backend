@@ -211,6 +211,30 @@ public class R2StorageService implements StorageService {
         }
     }
 
+    /** Tải đúng một đoạn byte để trình xem PDF có thể dùng HTTP Range thay vì chờ toàn bộ tệp. */
+    public Resource loadRangeAsResource(String key, long start, long end) {
+        validateKey(key);
+        if (start < 0 || end < start || end - start + 1 > settings.getMaxFileBytes())
+            throw new BadRequestException("Khoảng byte tải xuống không hợp lệ");
+        try (var stream =
+                client().getObject(
+                        GetObjectRequest.builder()
+                                .bucket(settings.getBucket())
+                                .key(key)
+                                .range("bytes=" + start + "-" + end)
+                                .build())) {
+            int expected = Math.toIntExact(end - start + 1);
+            byte[] bytes = stream.readNBytes(expected + 1);
+            if (bytes.length != expected)
+                throw new IllegalStateException("R2 trả về đoạn tệp không đầy đủ");
+            return new ByteArrayResource(bytes);
+        } catch (NoSuchKeyException ex) {
+            throw new ResourceNotFoundException("Không tìm thấy tệp trên R2");
+        } catch (IOException | SdkException ex) {
+            throw new IllegalStateException("Không tải được tệp từ R2");
+        }
+    }
+
     @Override
     public void delete(String key) {
         validateKey(key);

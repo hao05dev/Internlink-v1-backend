@@ -10,8 +10,12 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -41,28 +45,90 @@ public class MediaAssetController {
     }
 
     @GetMapping("/api/v1/media/{id}")
-    public ResponseEntity<Resource> privateFile(@PathVariable UUID id) {
-        return response(service.download(id, false));
+    public ResponseEntity<?> privateFile(@PathVariable UUID id, HttpServletRequest request) {
+        return response(id, false, null, request);
     }
 
     @GetMapping("/api/v1/public/media/{id}")
-    public ResponseEntity<Resource> publicFile(@PathVariable UUID id) {
-        return response(service.download(id, true));
+    public ResponseEntity<?> publicFile(@PathVariable UUID id, HttpServletRequest request) {
+        return response(id, true, null, request);
     }
 
-    private ResponseEntity<Resource> response(MediaAssetService.Download file) {
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(file.mime()))
-                .cacheControl(CacheControl.noStore())
-                .header("X-Content-Type-Options", "nosniff")
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        (file.mime().startsWith("image/")
-                                        ? ContentDisposition.inline()
-                                        : ContentDisposition.attachment())
-                                .filename(file.name(), StandardCharsets.UTF_8)
-                                .build()
-                                .toString())
-                .body(file.resource());
+    @GetMapping("/api/v1/media/{id}/preview")
+    public ResponseEntity<?> privatePreview(@PathVariable UUID id, HttpServletRequest request) {
+        return response(id, false, true, request);
+    }
+
+    @GetMapping("/api/v1/media/{id}/download")
+    public ResponseEntity<?> privateDownload(@PathVariable UUID id, HttpServletRequest request) {
+        return response(id, false, false, request);
+    }
+
+    @GetMapping("/api/v1/public/media/{id}/preview")
+    public ResponseEntity<?> publicPreview(@PathVariable UUID id, HttpServletRequest request) {
+        return response(id, true, true, request);
+    }
+
+    @GetMapping("/api/v1/public/media/{id}/download")
+    public ResponseEntity<?> publicDownload(@PathVariable UUID id, HttpServletRequest request) {
+        return response(id, true, false, request);
+    }
+
+    private ResponseEntity<?> response(
+            UUID id, boolean publicEndpoint, Boolean inline, HttpServletRequest request) {
+        var file = service.metadata(id, publicEndpoint);
+        boolean resolvedInline = inline != null ? inline : file.mime().startsWith("image/");
+        String etag = "\"" + file.checksum() + "\"";
+        if (etag.equals(request.getHeader(HttpHeaders.IF_NONE_MATCH))) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                    .eTag(etag)
+                    .cacheControl(cacheControl(publicEndpoint, Boolean.TRUE.equals(inline)))
+                    .build();
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(file.mime()));
+        headers.setCacheControl(cacheControl(publicEndpoint, Boolean.TRUE.equals(inline)));
+        headers.setETag(etag);
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set(HttpHeaders.ACCEPT_RANGES, "bytes");
+        headers.setContentDisposition(
+                (resolvedInline ? ContentDisposition.inline() : ContentDisposition.attachment())
+                        .filename(file.name(), StandardCharsets.UTF_8)
+                        .build());
+
+        String rangeHeader = request.getHeader(HttpHeaders.RANGE);
+        if (rangeHeader == null || rangeHeader.isBlank())
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(file.size())
+                    .body(service.content(file));
+
+        try {
+            List<HttpRange> ranges = HttpRange.parseRanges(rangeHeader);
+            if (ranges.size() != 1) return rangeNotSatisfiable(file.size());
+            HttpRange range = ranges.get(0);
+            long start = range.getRangeStart(file.size());
+            long end = range.getRangeEnd(file.size());
+            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                    .headers(headers)
+                    .contentLength(end - start + 1)
+                    .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + file.size())
+                    .body(service.content(file, start, end));
+        } catch (IllegalArgumentException ex) {
+            return rangeNotSatisfiable(file.size());
+        }
+    }
+
+    private ResponseEntity<Void> rangeNotSatisfiable(long size) {
+        return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                .header(HttpHeaders.CONTENT_RANGE, "bytes */" + size)
+                .build();
+    }
+
+    private CacheControl cacheControl(boolean publicEndpoint, boolean inline) {
+        return publicEndpoint && inline
+                ? CacheControl.maxAge(Duration.ofHours(1)).cachePublic()
+                : CacheControl.noStore();
     }
 }
