@@ -36,12 +36,6 @@ public class InternshipTermRequest {
     @NotBlank(message = "Học kỳ không được để trống")
     private String semester;
 
-    @NotNull(message = "Thời gian mở đăng ký không được để trống")
-    private OffsetDateTime registrationOpenAt;
-
-    @NotNull(message = "Thời gian đóng đăng ký không được để trống")
-    private OffsetDateTime registrationCloseAt;
-
     @NotNull(message = "Ngày bắt đầu thực tập không được để trống")
     private LocalDate startDate;
 

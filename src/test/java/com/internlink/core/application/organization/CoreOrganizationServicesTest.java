@@ -229,8 +229,6 @@ class CoreOrganizationServicesTest {
                         .termName("Term")
                         .academicYear("2026")
                         .semester("1")
-                        .registrationOpenAt(OffsetDateTime.now())
-                        .registrationCloseAt(OffsetDateTime.now().plusDays(1))
                         .startDate(LocalDate.now().plusMonths(2))
                         .endDate(LocalDate.now().plusMonths(1))
                         .applicationDeadline(OffsetDateTime.now().plusDays(10))

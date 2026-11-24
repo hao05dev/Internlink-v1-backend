@@ -23,9 +23,7 @@ class AssistantTermInfoProviderTest {
     private final AssistantTermInfoProvider provider = new AssistantTermInfoProvider(repository, new ObjectMapper());
 
     private static Term term(String settings) {
-        return new Term(UUID.randomUUID(), "HE-2026", "Học kỳ Hè 2026-2027", "2026-2027", "3", "APPLICATION_OPEN",
-                OffsetDateTime.of(2026, 10, 24, 18, 0, 0, 0, ZoneOffset.UTC), // = 25/10 giờ VN
-                OffsetDateTime.of(2026, 12, 1, 3, 0, 0, 0, ZoneOffset.UTC), null,
+        return new Term(UUID.randomUUID(), "HE-2026", "Học kỳ Hè 2026-2027", "2026-2027", "3", "APPLICATION_OPEN", null,
                 LocalDate.of(2026, 11, 15), LocalDate.of(2027, 2, 13), null, settings);
     }
 
@@ -34,8 +32,8 @@ class AssistantTermInfoProviderTest {
         Map<String, Object> row = provider.toRow(term(null), List.of("M-TT-01 (bắt buộc)"));
         assertThat(row.get("semester")).isEqualTo("Học kỳ hè");
         assertThat(row.get("status_label")).isEqualTo("đang nhận hồ sơ ứng tuyển");
-        assertThat(row.get("registration")).isEqualTo("25/10/2026 – 01/12/2026");
         assertThat(row.get("internship_period")).isEqualTo("15/11/2026 – 13/02/2027");
+        assertThat(row).doesNotContainKey("registration"); // hạn đăng ký học phần do hệ thống của Trường lo
         assertThat(row.get("application_deadline")).isNull();
         assertThat(row.get("forms")).isEqualTo(List.of("M-TT-01 (bắt buộc)"));
     }

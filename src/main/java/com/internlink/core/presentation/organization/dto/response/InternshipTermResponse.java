@@ -23,8 +23,6 @@ public class InternshipTermResponse {
     private String termName;
     private String academicYear;
     private String semester;
-    private OffsetDateTime registrationOpenAt;
-    private OffsetDateTime registrationCloseAt;
     private LocalDate startDate;
     private LocalDate endDate;
     private OffsetDateTime applicationDeadline;

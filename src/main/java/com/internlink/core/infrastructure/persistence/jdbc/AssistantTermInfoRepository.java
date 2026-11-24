@@ -22,20 +22,18 @@ public class AssistantTermInfoRepository {
     private final JdbcTemplate jdbc;
 
     public record Term(UUID id, String code, String name, String academicYear, String semester, String status,
-                       OffsetDateTime registrationOpenAt, OffsetDateTime registrationCloseAt,
                        OffsetDateTime applicationDeadline, LocalDate startDate, LocalDate endDate,
                        OffsetDateTime evaluationDeadline, String settingsJson) {}
 
     public List<Term> publishedTerms(int limit) {
-        return jdbc.query("SELECT id, code, term_name, academic_year, semester, status, registration_open_at,"
-                        + " registration_close_at, application_deadline, start_date, end_date, evaluation_deadline,"
+        return jdbc.query("SELECT id, code, term_name, academic_year, semester, status,"
+                        + " application_deadline, start_date, end_date, evaluation_deadline,"
                         + " settings::text FROM internship_terms WHERE status <> 'DRAFT'"
                         + " ORDER BY start_date DESC NULLS LAST LIMIT ?",
                 (rs, i) -> new Term(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3), rs.getString(4),
                         rs.getString(5), rs.getString(6), rs.getObject(7, OffsetDateTime.class),
-                        rs.getObject(8, OffsetDateTime.class), rs.getObject(9, OffsetDateTime.class),
-                        rs.getObject(10, LocalDate.class), rs.getObject(11, LocalDate.class),
-                        rs.getObject(12, OffsetDateTime.class), rs.getString(13)), limit);
+                        rs.getObject(8, LocalDate.class), rs.getObject(9, LocalDate.class),
+                        rs.getObject(10, OffsetDateTime.class), rs.getString(11)), limit);
     }
 
     public record Milestone(String kind, String label, String note, OffsetDateTime startAt, OffsetDateTime endAt,

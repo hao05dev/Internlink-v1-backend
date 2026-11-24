@@ -92,17 +92,11 @@ public class InternshipTermServiceImpl implements InternshipTermService {
             throw new BadRequestException("Ngày bắt đầu thực tập phải trước ngày kết thúc");
         }
 
-        if (request.getRegistrationOpenAt().isAfter(request.getRegistrationCloseAt())) {
-            throw new BadRequestException("Thời gian mở đăng ký phải trước thời gian đóng đăng ký");
-        }
-
         InternshipTerm term = InternshipTerm.builder()
             .code(request.getCode().trim().toUpperCase())
             .termName(request.getTermName().trim())
             .academicYear(request.getAcademicYear().trim())
             .semester(request.getSemester().trim())
-            .registrationOpenAt(request.getRegistrationOpenAt())
-            .registrationCloseAt(request.getRegistrationCloseAt())
             .startDate(request.getStartDate())
             .endDate(request.getEndDate())
             .applicationDeadline(request.getApplicationDeadline())
@@ -151,15 +145,6 @@ public class InternshipTermServiceImpl implements InternshipTermService {
 
         // ── 2. Điều kiện tiên quyết theo từng bước đích ──────────────────────
         switch (newStatus) {
-            case REGISTRATION_OPEN -> {
-                // Chỉ mở đăng ký khi thời điểm hiện tại chưa quá hạn đăng ký
-                OffsetDateTime now = OffsetDateTime.now();
-                if (now.isAfter(term.getRegistrationCloseAt())) {
-                    throw new BadRequestException(
-                        "Thời gian đăng ký đã qua hạn, không thể mở đăng ký kỳ '" + term.getCode() + "'"
-                    );
-                }
-            }
             case APPLICATION_OPEN -> {
                 // Kiểm tra applicationDeadline chưa qua
                 OffsetDateTime now = OffsetDateTime.now();
@@ -188,7 +173,7 @@ public class InternshipTermServiceImpl implements InternshipTermService {
                     ));
                 }
             }
-            default -> { /* DRAFT, ACTIVE: không có điều kiện tiên quyết đặc biệt */ }
+            default -> { /* DRAFT, REGISTRATION_OPEN, ACTIVE: không có điều kiện tiên quyết đặc biệt */ }
         }
 
         term.setStatus(newStatus);
@@ -211,8 +196,6 @@ public class InternshipTermServiceImpl implements InternshipTermService {
             .termName(entity.getTermName())
             .academicYear(entity.getAcademicYear())
             .semester(entity.getSemester())
-            .registrationOpenAt(entity.getRegistrationOpenAt())
-            .registrationCloseAt(entity.getRegistrationCloseAt())
             .startDate(entity.getStartDate())
             .endDate(entity.getEndDate())
             .applicationDeadline(entity.getApplicationDeadline())

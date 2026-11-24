@@ -112,8 +112,6 @@ class NotificationCampaignPostgresTest {
                                 .termName("Kỳ thử")
                                 .academicYear("2026")
                                 .semester("1")
-                                .registrationOpenAt(now.minusDays(1))
-                                .registrationCloseAt(now.plusHours(1))
                                 .startDate(LocalDate.now())
                                 .endDate(LocalDate.now().plusMonths(2))
                                 .applicationDeadline(now.plusHours(2))
@@ -319,7 +317,7 @@ class NotificationCampaignPostgresTest {
                                 Integer.class,
                                 student.getId()))
                 .isEqualTo(1);
-        term.setRegistrationCloseAt(now.plusHours(3));
+        term.setApplicationDeadline(now.plusHours(3));
         term = terms.saveAndFlush(term);
         assertThat(source.stillPending(candidate, now)).isFalse();
         var changed =

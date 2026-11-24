@@ -27,7 +27,7 @@ WITH placements AS (
 ), due AS (
     SELECT r.claimed_user_id AS recipient_id,t.id::text AS entity,'APPLICATION_DEADLINE'::text AS kind,
         'Nhắc hoàn thành hồ sơ đăng ký thực tập'::text AS title,'/student/applications'::text AS path,
-        CASE WHEN t.status='REGISTRATION_OPEN' THEN t.registration_close_at ELSE t.application_deadline END AS due_at
+        t.application_deadline AS due_at
     FROM student_rosters r JOIN internship_terms t ON t.id=r.term_id
     WHERE r.claimed_user_id IS NOT NULL
         AND t.status IN ('REGISTRATION_OPEN','APPLICATION_OPEN')

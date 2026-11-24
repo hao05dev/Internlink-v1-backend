@@ -24,7 +24,7 @@ public class AssistantTermInfoProvider {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final ZoneId VN = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final Map<String, String> STATUS = Map.of(
-            "REGISTRATION_OPEN", "đang mở đăng ký", "APPLICATION_OPEN", "đang nhận hồ sơ ứng tuyển",
+            "REGISTRATION_OPEN", "đang tìm nơi thực tập", "APPLICATION_OPEN", "đang nhận hồ sơ ứng tuyển",
             "ACTIVE", "đang diễn ra", "EVALUATING", "đang đánh giá", "CLOSED", "đã kết thúc");
     private static final Map<String, String> SEMESTER = Map.of("1", "Học kỳ 1", "HK1", "Học kỳ 1",
             "2", "Học kỳ 2", "HK2", "Học kỳ 2", "3", "Học kỳ hè", "HE", "Học kỳ hè");
@@ -64,7 +64,6 @@ public class AssistantTermInfoProvider {
         row.put("semester", SEMESTER.getOrDefault(term.semester(), term.semester()));
         row.put("status", term.status());
         row.put("status_label", STATUS.getOrDefault(term.status(), term.status()));
-        row.put("registration", range(term.registrationOpenAt(), term.registrationCloseAt()));
         row.put("application_deadline", date(term.applicationDeadline()));
         row.put("internship_period", range(term.startDate(), term.endDate()));
         row.put("evaluation_deadline", date(term.evaluationDeadline()));

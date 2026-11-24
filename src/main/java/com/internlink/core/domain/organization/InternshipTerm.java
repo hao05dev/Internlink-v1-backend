@@ -34,12 +34,6 @@ public class InternshipTerm extends BaseEntity {
     @Column(name = "semester", nullable = false, length = 20)
     private String semester;
 
-    @Column(name = "registration_open_at", nullable = false)
-    private OffsetDateTime registrationOpenAt;
-
-    @Column(name = "registration_close_at", nullable = false)
-    private OffsetDateTime registrationCloseAt;
-
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
