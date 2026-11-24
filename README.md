@@ -18,7 +18,7 @@ Hệ thống gồm 3 repo:
 | Repo | Vai trò | Công nghệ |
 |---|---|---|
 | **Internlink-v1-backend** (repo này) | API nghiệp vụ, phân quyền, lưu trữ, email, thông báo | Spring Boot 3.3, Java 21, JPA, Flyway, PostgreSQL 16 + pgvector |
-| Internlink-v1-frontend (private) | Cổng web cho 7 vai trò | Next.js 14 App Router, TypeScript, Tailwind CSS, Zustand |
+| Internlink-v1-frontend (private) | Cổng web cho 7 vai trò | Next.js 14 App Router, TypeScript, Tailwind CSS, TanStack Query |
 | Internlink-v1-ai (private) | Trích xuất kỹ năng, gợi ý việc làm, phân tích CV–JD, trợ lý CapyLink (RAG trên quy chế), đọc phiếu M-TT-03 | FastAPI, taxonomy kỹ năng IT (ESCO), Gemini / e5 (tùy chọn) |
 
 ---
@@ -209,7 +209,7 @@ Mỗi repo có GitHub Actions chạy trên mọi push và pull request vào `mai
 | Repo | Lệnh | Nội dung |
 |---|---|---|
 | Backend | `mvn verify` | ~580 test JUnit/Mockito; test tích hợp chạy trên H2 và PostgreSQL 16 + pgvector (service container trong CI) |
-| Frontend | `npm run lint`, `npx tsc --noEmit`, `npm test` | ESLint, kiểm tra kiểu TypeScript, ~130 file test Vitest |
+| Frontend | `npm run lint`, `npx tsc --noEmit`, `npm test` | ESLint, kiểm tra kiểu TypeScript, 674 test Vitest trong 135 file |
 | AI | `python -m pytest` | ~160 test pytest trên Python 3.10 và 3.13, gồm test cho benchmark |
 
 ---
