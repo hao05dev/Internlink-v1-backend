@@ -1,7 +1,9 @@
 package com.internlink.core.presentation.organization.controller;
 
+import com.internlink.core.application.organization.TermPlanDocumentService;
 import com.internlink.core.application.organization.TermPlanService;
 import com.internlink.core.shared.api.ApiResponse;
+import com.internlink.core.shared.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,6 +17,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TermPlanController {
     private final TermPlanService plans;
+    private final TermPlanDocumentService documents;
+
+    public record ReadDocumentRequest(UUID mediaId) {}
 
     @GetMapping
     public ResponseEntity<ApiResponse<TermPlanService.TermPlan>> get(@PathVariable UUID termId) {
@@ -34,5 +39,15 @@ public class TermPlanController {
         var result = plans.publish(termId);
         return ResponseEntity.ok(ApiResponse.success(
             "Đã công bố kế hoạch TTTT tới " + result.students() + " SV và " + result.staff() + " cán bộ", result));
+    }
+
+    /** AI đọc văn bản kế hoạch đã tải lên, trả bản nháp các mốc để điền form (không lưu). */
+    @PostMapping("/read-document")
+    @PreAuthorize("hasAnyRole('SCHOOL_OFFICE', 'ADMIN')")
+    public ResponseEntity<ApiResponse<TermPlanDocumentService.PlanReading>> readDocument(
+            @PathVariable UUID termId, @RequestBody ReadDocumentRequest request) {
+        if (request == null || request.mediaId() == null)
+            throw new BadRequestException("Thiếu tệp văn bản kế hoạch");
+        return ResponseEntity.ok(ApiResponse.success(documents.read(termId, request.mediaId())));
     }
 }

@@ -45,13 +45,17 @@ public class TermPlanService {
     private final SecurityGuard security;
     private final NotificationService notifications;
     private final AuditLogService audit;
+    private final TermPlanDocumentService documents;
+    private final TermPlanNewsPublisher news;
 
     public record MilestoneItem(UUID id, String kind, String label, String note,
                                 OffsetDateTime startAt, OffsetDateTime endAt, Integer requiredWeeks, int sortOrder,
                                 String latePolicy) {}
 
+    /** document: tệp văn bản gốc; newsSlug: bài tin công khai (/career-guide/{slug}) sau khi công bố. */
     public record TermPlan(UUID termId, String termName, String documentRef, OffsetDateTime publishedAt,
-                           boolean editable, List<MilestoneItem> milestones) {}
+                           boolean editable, List<MilestoneItem> milestones,
+                           TermPlanDocumentService.PlanDocument document, String newsSlug) {}
 
     /** latePolicy: ALLOW_LATE (mặc định) hoặc LOCK; chỉ giữ cho mốc hạn nộp Phiếu tiếp nhận. */
     public record MilestoneInput(String kind, String label, String note,
@@ -62,7 +66,12 @@ public class TermPlanService {
         }
     }
 
-    public record SavePlanRequest(String documentRef, List<MilestoneInput> milestones) {}
+    /** documentMediaId: tệp văn bản đã tải lên (POST_ATTACHMENT); null = gỡ tệp. */
+    public record SavePlanRequest(String documentRef, List<MilestoneInput> milestones, UUID documentMediaId) {
+        public SavePlanRequest(String documentRef, List<MilestoneInput> milestones) {
+            this(documentRef, milestones, null);
+        }
+    }
 
     public record PublishResult(int students, int staff, TermPlan plan) {}
 
@@ -71,9 +80,8 @@ public class TermPlanService {
         var term = term(termId);
         boolean school = ResourceAuthorization.actsForSchool(actor());
         // Kế hoạch chưa công bố chỉ VP Trường thấy để soạn; người khác nhận danh sách rỗng.
-        List<MilestoneItem> items = school || term.getPlanPublishedAt() != null ? items(termId) : List.of();
-        return new TermPlan(term.getId(), term.getTermName(), term.getPlanDocumentRef(),
-            term.getPlanPublishedAt(), school, items);
+        boolean visible = school || term.getPlanPublishedAt() != null;
+        return view(term, school, visible ? items(termId) : List.of(), visible);
     }
 
     /** Ghi đè toàn bộ mốc của kỳ (form nhập theo bảng của văn bản). Không đổi trạng thái công bố. */
@@ -89,13 +97,14 @@ public class TermPlanService {
         int order = 0;
         for (MilestoneInput input : request.milestones()) rows.add(validated(term, input, order++));
         term.setPlanDocumentRef(trimToNull(request.documentRef(), 100, "Số văn bản"));
+        if (request.documentMediaId() != null) documents.requireDocument(request.documentMediaId());
+        term.setPlanDocumentMediaId(request.documentMediaId());
         milestones.deleteByTermId(termId);
         milestones.saveAll(rows);
         terms.save(term);
         audit.logAction(security.currentUser().getId(), "SAVE_TERM_PLAN", "InternshipTerm", termId, "SUCCESS",
             Map.of("milestones", rows.size()), null);
-        return new TermPlan(term.getId(), term.getTermName(), term.getPlanDocumentRef(),
-            term.getPlanPublishedAt(), true, items(termId));
+        return view(term, true, items(termId), true);
     }
 
     /** Công bố (hoặc công bố lại sau khi sửa) và thông báo cho SV trong danh sách học phần, Khoa và GV. */
@@ -109,7 +118,9 @@ public class TermPlanService {
         boolean republish = term.getPlanPublishedAt() != null;
         term.setPlanPublishedAt(OffsetDateTime.now());
         term.setPlanPublishedBy(publisher);
+        String slug = news.publish(term, current, publisher, documents.describe(term));
         terms.save(term);
+        String link = "/career-guide/" + slug;
 
         String title = (republish ? "Cập nhật kế hoạch TTTT " : "Kế hoạch TTTT ") + term.getTermName();
         String message = (term.getPlanDocumentRef() != null ? "Văn bản số " + term.getPlanDocumentRef() + ". " : "")
@@ -117,21 +128,18 @@ public class TermPlanService {
         Set<UUID> students = new LinkedHashSet<>();
         for (StudentRoster roster : rosters.findByTermId(termId))
             if (roster.getClaimedUser() != null) students.add(roster.getClaimedUser().getId());
-        students.forEach(id -> notifications.sendNotification(id, "TERM_PLAN_PUBLISHED", title, message,
-            "/student/dashboard"));
+        students.forEach(id -> notifications.sendNotification(id, "TERM_PLAN_PUBLISHED", title, message, link));
         int staff = 0;
         for (UserRole role : List.of(UserRole.FACULTY_ADMIN, UserRole.LECTURER)) {
-            String path = role == UserRole.FACULTY_ADMIN ? "/faculty/dashboard" : "/lecturer/dashboard";
             for (User user : users.findByRole(role)) {
                 if (!Boolean.TRUE.equals(user.getIsActive())) continue;
-                notifications.sendNotification(user.getId(), "TERM_PLAN_PUBLISHED", title, message, path);
+                notifications.sendNotification(user.getId(), "TERM_PLAN_PUBLISHED", title, message, link);
                 staff++;
             }
         }
         audit.logAction(publisher.getId(), republish ? "REPUBLISH_TERM_PLAN" : "PUBLISH_TERM_PLAN",
             "InternshipTerm", termId, "SUCCESS", Map.of("students", students.size(), "staff", staff), null);
-        return new PublishResult(students.size(), staff, new TermPlan(term.getId(), term.getTermName(),
-            term.getPlanDocumentRef(), term.getPlanPublishedAt(), true, current));
+        return new PublishResult(students.size(), staff, view(term, true, current, true));
     }
 
     static TermMilestone validated(InternshipTerm term, MilestoneInput input, int order) {
@@ -162,6 +170,12 @@ public class TermPlanService {
         String trimmed = value.trim();
         if (trimmed.length() > max) throw new BadRequestException(field + " tối đa " + max + " ký tự");
         return trimmed;
+    }
+
+    private TermPlan view(InternshipTerm term, boolean editable, List<MilestoneItem> items, boolean showDocument) {
+        return new TermPlan(term.getId(), term.getTermName(), term.getPlanDocumentRef(), term.getPlanPublishedAt(),
+            editable, items, showDocument ? documents.describe(term).orElse(null) : null,
+            term.getPlanPublishedAt() == null ? null : news.slug(term).orElse(null));
     }
 
     private List<MilestoneItem> items(UUID termId) {

@@ -4,7 +4,7 @@ import java.text.Normalizer;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-final class PostSlugNormalizer {
+public final class PostSlugNormalizer {
     private static final Pattern NON_LATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
     private static final Pattern DIACRITICS =
@@ -14,7 +14,7 @@ final class PostSlugNormalizer {
 
     private PostSlugNormalizer() {}
 
-    static String normalize(String input) {
+    public static String normalize(String input) {
         if (input == null) return "";
         String compact = WHITESPACE.matcher(input.trim()).replaceAll("-");
         String normalized = Normalizer.normalize(compact, Normalizer.Form.NFD);

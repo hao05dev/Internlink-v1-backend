@@ -63,6 +63,14 @@ public class InternshipTerm extends BaseEntity {
     @JoinColumn(name = "plan_published_by_user_id")
     private com.internlink.core.domain.auth.User planPublishedBy;
 
+    /** Tệp văn bản kế hoạch (media POST_ATTACHMENT) để đính kèm vào bài tin khi công bố. */
+    @Column(name = "plan_document_media_id")
+    private java.util.UUID planDocumentMediaId;
+
+    /** Bài tin tức công khai tạo lúc công bố; công bố lại thì cập nhật đúng bài này. */
+    @Column(name = "plan_news_post_id")
+    private java.util.UUID planNewsPostId;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
     @Column(name = "settings", columnDefinition = "jsonb", nullable = false)

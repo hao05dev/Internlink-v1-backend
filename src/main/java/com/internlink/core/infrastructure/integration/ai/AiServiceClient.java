@@ -92,6 +92,14 @@ public class AiServiceClient {
         return infer("/api/v1/assistance/read-m03", Map.of("mime_type", mimeType, "content_base64", base64), Duration.ofSeconds(60));
     }
 
+    /** Đọc văn bản Kế hoạch TTTT (PDF scan); model đa phương thức mất khoảng 15–40 giây. */
+    public Map<String, Object> readTermPlan(String mimeType, String base64, String academicYear) {
+        Map<String, Object> body = new HashMap<>(Map.of("mime_type", mimeType, "content_base64", base64));
+        if (academicYear != null) body.put("academic_year", academicYear);
+        // AI chờ Gemini tối đa 90 giây với văn bản scan; backend chờ lâu hơn để nhận được mã lỗi rõ ràng.
+        return infer("/api/v1/assistance/read-term-plan", body, Duration.ofSeconds(120));
+    }
+
     public Map<String, Object> parseRubric(String name, String base64) {
         return infer("/api/v1/assistance/parse-rubric", Map.of("filename", name, "content_base64", base64, "allow_cloud", false));
     }
